@@ -120,6 +120,20 @@
   .record .memo { color: var(--sub); font-size: 12px; word-break: break-all; }
   .record .del { border: 0; background: none; color: var(--sub); font-size: 18px; cursor: pointer; padding: 0 4px; }
 
+  .alert { display: none; background: var(--red); color: #fff; border-radius: 8px; padding: 10px 12px;
+    margin: 10px 0; font-size: 13.5px; line-height: 1.5; }
+  .alert.show { display: block; }
+  .alert .row { margin-top: 8px; }
+  .alert .btn { background: #fff; color: var(--red); }
+  .track { margin: 10px 0; text-align: center; border-color: var(--primary); }
+  .track .tname { font-weight: 700; font-size: 14px; }
+  .track canvas { width: 100%; max-width: 320px; height: auto; }
+  .track .ptext { font-weight: 700; font-size: 15px; margin-top: 2px; }
+  .track .rtext { font-size: 12px; color: var(--sub); margin-bottom: 8px; }
+  .live { font-size: 11.5px; color: var(--sub); }
+  .live.on { color: var(--green); font-weight: 700; }
+  .live.lost { color: var(--amber); }
+  .divider { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
   footer { font-size: 11.5px; color: var(--sub); text-align: center; padding: 12px 16px 18px; line-height: 1.6; }
   .status { background: #E2E8F0; color: var(--accent); font-size: 12px; padding: 7px 14px; }
 
@@ -150,7 +164,7 @@
 
   <nav>
     <button data-tab="lens" class="active">렌즈 탐지</button>
-    <button data-tab="ble">기기 찾기</button>
+    <button data-tab="ble">전파 감시</button>
     <button data-tab="check">육안 점검</button>
     <button data-tab="records">점검 기록</button>
   </nav>
@@ -195,25 +209,48 @@
       </div>
     </section>
 
-    <!-- ───────────── 기기 찾기 ───────────── -->
+    <!-- ───────────── 전파 감시 ───────────── -->
     <section id="tab-ble">
-      <h2>블루투스 기기 찾기</h2>
-      <p class="desc">브라우저의 기기 선택 창을 통해 주변 블루투스 기기를 확인합니다.
-        <b>안드로이드 또는 PC의 크롬</b>에서 동작하며, 아이폰에서는 지원되지 않습니다.</p>
+      <h2>블루투스 전파 감시</h2>
+      <p class="desc" id="bleDesc"></p>
 
-      <button class="btn block" id="findGlassesBtn">AI 안경 찾기</button>
-      <p class="desc" style="margin-top:6px">AI 안경으로 알려진 이름·제조사의 기기만 선택 창에 표시됩니다.
-        <b>목록이 비어 있으면</b> 해당 조건의 기기가 주변에서 감지되지 않은 것입니다.</p>
-      <button class="btn block outline" id="allDevicesBtn">주변 기기 전체 보기</button>
+      <button class="btn block" id="monitorBtn">감시 시작</button>
+      <div class="row" style="justify-content: space-between; margin-top: 6px;">
+        <span id="monitorState" class="live">감시 중지됨</span>
+        <label class="check-inline"><input type="checkbox" id="showNormalDev"> 일반 기기 표시</label>
+      </div>
+
+      <div id="alertBanner" class="alert"></div>
+
+      <div id="trackBox" class="card track" style="display:none">
+        <div class="tname" id="trackName"></div>
+        <canvas id="trackGauge" width="320" height="180"></canvas>
+        <div class="ptext" id="trackText">신호 수신 대기</div>
+        <div class="rtext" id="trackRssi"></div>
+        <div class="row center">
+          <button class="btn small red" id="trackStopBtn">추적 중지</button>
+          <button class="btn small green" id="trackRecordBtn">기록</button>
+          <label class="check-inline"><input type="checkbox" id="trackVibe" checked> 진동 신호</label>
+        </div>
+      </div>
 
       <div class="summary">
-        <div><strong id="cntAll">0</strong><span>확인한 기기</span></div>
+        <div><strong id="cntAll">0</strong><span>감지 기기</span></div>
         <div><strong id="cntDanger" style="color:var(--red)">0</strong><span>위험</span></div>
         <div><strong id="cntCheck" style="color:var(--amber)">0</strong><span>주의</span></div>
       </div>
-      <div id="deviceList"><div class="empty">아직 확인한 기기가 없습니다.</div></div>
-      <p class="desc">※ 웹 버전은 신호 세기 측정과 위치 추적을 지원하지 않습니다.
-        이 기능이 필요하면 PC 프로그램(exe)을 사용하십시오.</p>
+      <div id="deviceList"><div class="empty">아직 감지된 기기가 없습니다.</div></div>
+
+      <div id="webChooser">
+        <hr class="divider">
+        <h2>기기 선택 창으로 찾기 (웹)</h2>
+        <p class="desc">안드로이드 또는 PC의 크롬에서 동작하며, 아이폰에서는 지원되지 않습니다.
+          AI 안경으로 알려진 이름·제조사의 기기만 선택 창에 표시되며, <b>목록이 비어 있으면</b>
+          해당 조건의 기기가 감지되지 않은 것입니다.</p>
+        <button class="btn block" id="findGlassesBtn">AI 안경 찾기</button>
+        <div class="spacer"></div>
+        <button class="btn block outline" id="allDevicesBtn">주변 기기 전체 보기</button>
+      </div>
     </section>
 
     <!-- ───────────── 육안 점검 ───────────── -->
@@ -460,14 +497,6 @@ const GLASSES_NAMES = ["ray-ban", "rayban", "meta", "oakley", "xreal", "rokid",
 const NAME_PREFIXES = ["Ray-Ban", "RayBan", "Rayban", "RB Meta", "Meta", "META", "Oakley",
   "XREAL", "Xreal", "Rokid", "ROKID", "Even G1", "INMO", "Inmo", "Solos", "SOLOS",
   "Vuzix", "Halliday", "Glass", "GLASS"];
-const COMPANY_IDS = [0x01AB, 0x058E];   // Meta (실기기 검증 필요)
-const FAKE_DEVICES = [
-  { name: "Ray-Ban Meta 7F2A", matched: true },
-  { name: "Oakley Meta HSTN", matched: true },
-  { name: "", matched: false },
-  { name: "AirPods Pro", matched: false },
-  { name: "Galaxy Buds2 Pro", matched: false },
-];
 const CHECKLIST = [
   "안경테(특히 다리 부분)가 일반 안경보다 두껍거나 무겁다",
   "안경 전면 모서리에 소형 렌즈 또는 구멍이 있다",
@@ -489,6 +518,10 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const state = { sim: false };
+const IS_NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" &&
+                     window.Capacitor.isNativePlatform());
+const BleNative = IS_NATIVE && window.Capacitor.Plugins ? window.Capacitor.Plugins.BluetoothLe : null;
+document.querySelector("header p").textContent = "시험 감독 보조 프로그램 · " + (IS_NATIVE ? "앱" : "웹 버전");
 
 function setStatus(text) { $("status").textContent = text; }
 
@@ -543,6 +576,7 @@ function setSim(on) {
   $("modeBadge").classList.toggle("sim", on);
   stopCamera();
   clearBaseline();
+  if (typeof resetMonitor === "function") resetMonitor();
   setStatus(on ? "시뮬레이션 모드: 가상 영상과 가상 기기를 사용합니다."
                : "실제 모드: 카메라와 블루투스를 사용합니다.");
 }
@@ -754,36 +788,319 @@ document.addEventListener("visibilitychange", () => {
 });
 
 /* ═══════════════════════════════════════════════════════════
-   기기 찾기 (Web Bluetooth)
+   전파 감시 (블루투스)
+   - 앱: 주변 신호를 계속 수신 → 제조사 ID·기기명·신호 세기로 판별, 위치 추적
+   - 웹: 브라우저 기기 선택 창 방식
    ═══════════════════════════════════════════════════════════ */
-const ble = { devices: [] };
-$("findGlassesBtn").onclick = () => requestBle(true);
-$("allDevicesBtn").onclick = () => requestBle(false);
+const GLASSES_COMPANY = { 0x01AB: "Meta Platforms", 0x058E: "Meta Platforms Technologies" };
+const NORMAL_COMPANY = { 0x004C: "Apple", 0x0075: "Samsung", 0x0006: "Microsoft" };
+const SIM_DEVICES = [
+  { id: "SIM-01", name: "Ray-Ban Meta 7F2A", companyIds: [0x01AB], base: -62 },
+  { id: "SIM-02", name: "", companyIds: [], base: -55 },
+  { id: "SIM-03", name: "AirPods Pro", companyIds: [0x004C], base: -66 },
+  { id: "SIM-04", name: "Galaxy Buds2 Pro", companyIds: [0x0075], base: -72 },
+  { id: "SIM-05", name: "", companyIds: [0x01AB], base: -80 },    // 이름을 숨긴 메타 기기
+  { id: "SIM-06", name: "LG TV", companyIds: [], base: -86 },
+];
+const hex4 = n => "0x" + n.toString(16).toUpperCase().padStart(4, "0");
 
-function classify(name, matched) {
-  const reasons = [];
-  const lower = (name || "").toLowerCase();
-  const word = GLASSES_NAMES.find(w => lower.includes(w));
-  if (word) reasons.push(`기기명에 '${word}' 포함`);
-  if (matched) reasons.push("AI 안경 검색 조건(이름·제조사)과 일치");
-  if (word || matched) return { level: "danger", reasons };
-  if (!name) return { level: "check", reasons: ["기기명을 확인할 수 없음 - 직접 확인 필요"] };
-  return { level: "normal", reasons: ["AI 안경 조건에 해당하지 않음"] };
+function distanceHint(rssi) {
+  if (rssi >= -55) return "근거리 (약 1~2m)";
+  if (rssi >= -70) return "중거리 (교실 내)";
+  return "원거리";
+}
+function rssiToProximity(rssi) { return Math.max(0, Math.min(100, (rssi + 95) * 100 / 60)); }
+function proximityInfo(p) {
+  if (p >= 75) return ["매우 가까움 - 반경 1~2m 이내", "#B91C1C"];
+  if (p >= 50) return ["가까움 - 접근 중", "#C2410C"];
+  if (p >= 25) return ["보통", "#A16207"];
+  return ["멂", "#1D4ED8"];
 }
 
-function addDevice(name, matched) {
-  const c = classify(name, matched);
-  ble.devices.unshift({ name: name || "(이름 없음)", level: c.level, reasons: c.reasons,
-                        time: new Date().toLocaleTimeString("ko-KR", { hour12: false }) });
+function classifyDevice(d) {
+  let score = 0;
+  const reasons = [], lower = (d.name || "").toLowerCase();
+  const word = GLASSES_NAMES.find(w => lower.includes(w));
+  if (word) { score += 50; reasons.push(`기기명에 '${word}' 포함`); }
+  for (const id of d.companyIds) {
+    if (GLASSES_COMPANY[id]) { score += 50; reasons.push(`제조사 ID 일치: ${GLASSES_COMPANY[id]} (${hex4(id)})`); }
+    else if (NORMAL_COMPANY[id]) reasons.push(`일반 기기 제조사: ${NORMAL_COMPANY[id]}`);
+  }
+  if (d.matched) { score += 50; reasons.push("AI 안경 검색 조건(이름·제조사)과 일치"); }
+  let level = "normal";
+  if (score >= 50) level = "danger";
+  else if (!d.name && !reasons.length && (d.rssi == null || d.rssi >= -60)) {
+    level = "check";
+    reasons.push(d.rssi == null ? "기기명을 확인할 수 없음 - 직접 확인 필요" : "식별 불가 기기가 근거리에서 감지됨");
+  }
+  d.score = score; d.level = level; d.reasons = reasons;
+  return d;
+}
+
+const mon = { running: false, devices: new Map(), listener: null, timers: [], alerted: new Set(),
+              tracking: null, trackTimer: 0, vibeTimer: 0, simState: {}, wakeLock: null };
+
+(function setupBleTab() {
+  $("bleDesc").innerHTML = IS_NATIVE
+    ? "교탁 등에 기기를 두고 <b>[감시 시작]</b>을 누르면 주변 블루투스 신호를 계속 감시합니다. " +
+      "AI 안경 신호가 감지되면 <b>진동으로 알립니다.</b> 감시 중에는 화면을 켜 두십시오."
+    : "자동 감시와 위치 추적은 <b>설치형 앱에서만</b> 동작합니다. 웹에서는 아래 기기 선택 창 방식을 사용하십시오. " +
+      "(시뮬레이션 모드에서는 자동 감시를 체험할 수 있습니다.)";
+  $("webChooser").style.display = IS_NATIVE ? "none" : "block";
+})();
+
+$("monitorBtn").onclick = () => mon.running ? stopMonitor() : startMonitor();
+$("showNormalDev").onchange = renderDevices;
+$("findGlassesBtn").onclick = () => requestBle(true);
+$("allDevicesBtn").onclick = () => requestBle(false);
+$("trackStopBtn").onclick = stopTrack;
+$("trackRecordBtn").onclick = () => {
+  const d = mon.devices.get(mon.tracking);
+  if (!d) return;
+  const p = d.rssi != null ? Math.round(rssiToProximity(d.rssi)) : 0;
+  openRecordDialog(`[위치 추적] ${d.name || "(이름 없음)"} - 근접도 ${p}% - ${d.reasons.join("; ")}`, LEVEL_LABEL[d.level]);
+};
+$("deviceList").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-act]");
+  if (!btn) return;
+  const d = mon.devices.get(btn.dataset.id);
+  if (!d) return;
+  if (btn.dataset.act === "track") startTrack(d.id);
+  else openRecordDialog(`[전파 감시] ${d.name || "(이름 없음)"}` +
+    (d.rssi != null ? ` (${d.rssi} dBm)` : "") + " - " + d.reasons.join("; "), LEVEL_LABEL[d.level]);
+});
+
+function onScan(s) {
+  const now = Date.now();
+  let d = mon.devices.get(s.id);
+  if (!d) { d = { id: s.id, name: "", companyIds: new Set(), samples: [], firstSeen: now }; mon.devices.set(s.id, d); }
+  if (s.name) d.name = s.name;
+  (s.companyIds || []).forEach(c => d.companyIds.add(c));
+  d.samples.push(s.rssi); if (d.samples.length > 5) d.samples.shift();
+  d.rssi = Math.round(d.samples.reduce((a, b) => a + b, 0) / d.samples.length);
+  d.lastSeen = now;
+  classifyDevice(d);
+  if (d.level === "danger" && !mon.alerted.has(d.id)) {
+    mon.alerted.add(d.id);
+    raiseAlert(d);
+  }
+}
+
+function raiseAlert(d) {
+  const b = $("alertBanner");
+  const total = [...mon.devices.values()].filter(x => x.level === "danger").length;
+  const where = d.rssi != null ? distanceHint(d.rssi) : "수동 확인";
+  b.innerHTML = `<b>경고: AI 안경 의심 신호 감지${total > 1 ? ` (총 ${total}개 - 아래 목록 확인)` : ""}</b>` +
+    `<br>최근 감지: ${esc(d.name || "(이름 없음)")} · ${esc(where)}` +
+    `<br><span style="font-size:12px">${esc(d.reasons.join(" / "))}</span>` +
+    `<div class="row"><button class="btn small" data-id="${esc(d.id)}" id="alertTrack">위치 추적</button>` +
+    `<button class="btn small" id="alertClose">닫기</button></div>`;
+  b.classList.add("show");
+  $("alertTrack").onclick = () => { b.classList.remove("show"); startTrack(d.id); };
+  $("alertClose").onclick = () => b.classList.remove("show");
+  try { navigator.vibrate && navigator.vibrate([400, 150, 400, 150, 400]); } catch (e) {}
+  setStatus(`AI 안경 의심 신호 감지: ${d.name || "(이름 없음)"}`);
+}
+
+async function startMonitor() {
+  if (!state.sim && !IS_NATIVE) {
+    showModal({ title: "자동 감시", message: "자동 감시는 설치형 앱에서만 동작합니다.\n\n" +
+      "웹에서는 아래의 [AI 안경 찾기]를 사용하거나, 시뮬레이션 모드에서 기능을 체험하십시오." });
+    return;
+  }
+  if (state.sim) {
+    mon.timers.push(setInterval(() => {
+      const dev = SIM_DEVICES[Math.floor(Math.random() * SIM_DEVICES.length)];
+      const st = mon.simState[dev.id] ?? dev.base;
+      const next = Math.max(-95, Math.min(-38, st + (Math.random() - 0.45) * 6));
+      mon.simState[dev.id] = next;
+      onScan({ id: dev.id, name: dev.name, companyIds: dev.companyIds, rssi: Math.round(next) });
+    }, 150));
+  } else {
+    const B = BleNative;
+    if (!B) { showModal({ title: "블루투스 오류", message: "블루투스 기능을 불러오지 못했습니다." }); return; }
+    try { await B.initialize({ androidNeverForLocation: true }); }
+    catch (e) {
+      showModal({ title: "블루투스 권한 필요", message: "블루투스 권한이 거부되었습니다.\n" +
+        "휴대폰 설정 > 애플리케이션 > AI 안경 탐지 > 권한에서 '근처 기기'(또는 위치)를 허용한 후 다시 시도하십시오.\n\n(" +
+        (e && e.message || e) + ")" });
+      return;
+    }
+    try {
+      const en = await B.isEnabled();
+      if (!en || !en.value) {
+        try { await B.requestEnable(); } catch (e) {}
+        const again = await B.isEnabled();
+        if (!again || !again.value) {
+          showModal({ title: "블루투스 꺼짐", message: "블루투스가 꺼져 있습니다. 블루투스를 켠 후 다시 시도하십시오." });
+          return;
+        }
+      }
+    } catch (e) {}
+    try {
+      mon.listener = await B.addListener("onScanResult", r => {
+        const md = (r && r.manufacturerData) || {};
+        onScan({ id: r.device && r.device.deviceId || "unknown",
+                 name: r.localName || (r.device && r.device.name) || "",
+                 rssi: typeof r.rssi === "number" ? r.rssi : -100,
+                 companyIds: Object.keys(md).map(k => parseInt(k, 10)).filter(n => !isNaN(n)) });
+      });
+      await B.requestLEScan({ allowDuplicates: true, scanMode: 2 });
+    } catch (e) {
+      showModal({ title: "감시 시작 실패", message: "블루투스 감시를 시작할 수 없습니다.\n(" + (e && e.message || e) + ")" });
+      stopMonitor(); return;
+    }
+    // 안드로이드는 장시간 스캔을 약하게 만들 수 있어 5분마다 다시 시작
+    mon.timers.push(setInterval(async () => {
+      try { await B.stopLEScan(); await B.requestLEScan({ allowDuplicates: true, scanMode: 2 }); } catch (e) {}
+    }, 5 * 60 * 1000));
+  }
+  try { if (navigator.wakeLock) mon.wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {}
+  mon.running = true;
+  mon.timers.push(setInterval(renderDevices, 1000));
+  $("monitorBtn").textContent = "감시 중지"; $("monitorBtn").classList.add("red");
+  $("monitorState").textContent = "감시 중" + (state.sim ? " (시뮬레이션)" : ""); $("monitorState").className = "live on";
+  setStatus("블루투스 전파 감시를 시작했습니다.");
   renderDevices();
-  setStatus(`기기 확인: ${name || "(이름 없음)"} → ${LEVEL_LABEL[c.level]}`);
+}
+
+async function stopMonitor() {
+  const wasRunning = mon.running;
+  mon.running = false;
+  mon.timers.forEach(clearInterval); mon.timers = [];
+  if (mon.listener) { try { await mon.listener.remove(); } catch (e) {} mon.listener = null; }
+  if (IS_NATIVE && BleNative && !state.sim) { try { await BleNative.stopLEScan(); } catch (e) {} }
+  try { if (mon.wakeLock) mon.wakeLock.release(); } catch (e) {}
+  mon.wakeLock = null;
+  stopTrack();
+  $("monitorBtn").textContent = "감시 시작"; $("monitorBtn").classList.remove("red");
+  $("monitorState").textContent = "감시 중지됨"; $("monitorState").className = "live";
+  if (wasRunning) setStatus("블루투스 전파 감시를 중지했습니다.");
+  renderDevices();
+}
+
+function resetMonitor() {
+  stopMonitor();
+  mon.devices.clear(); mon.alerted.clear(); mon.simState = {};
+  $("alertBanner").classList.remove("show");
+  renderDevices();
+}
+
+function liveText(d, now) {
+  if (d.manual) return ["수동 확인 " + d.time, "live"];
+  const age = Math.round((now - d.lastSeen) / 1000);
+  if (age < 5) return ["실시간 수신", "live on"];
+  if (age < 30) return [`${age}초 전 수신`, "live"];
+  return ["신호 끊김", "live lost"];
+}
+
+function renderDevices() {
+  const now = Date.now();
+  const all = [...mon.devices.values()].sort((a, b) => (b.score - a.score) || ((b.rssi ?? -999) - (a.rssi ?? -999)));
+  $("cntAll").textContent = all.length;
+  $("cntDanger").textContent = all.filter(d => d.level === "danger").length;
+  $("cntCheck").textContent = all.filter(d => d.level === "check").length;
+  const shown = all.filter(d => d.level !== "normal" || $("showNormalDev").checked);
+  const list = $("deviceList");
+  if (!all.length) { list.innerHTML = '<div class="empty">아직 감지된 기기가 없습니다.</div>'; return; }
+  if (!shown.length) {
+    list.innerHTML = '<div class="empty" style="color:var(--green);font-weight:700">의심 기기가 감지되지 않았습니다.</div>';
+    return;
+  }
+  list.innerHTML = shown.map(d => {
+    const [lt, lc] = liveText(d, now);
+    const sig = d.rssi != null ? `신호 세기 ${d.rssi} dBm · ${distanceHint(d.rssi)} · ` : "";
+    const canTrack = !d.manual && (IS_NATIVE || state.sim);
+    return `<div class="device lv-${d.level}"><div class="bar"></div><div class="body">
+      <div class="top"><span class="name">${esc(d.name || "(이름 없음)")}</span><span class="tag">${LEVEL_LABEL[d.level]}</span></div>
+      <div style="font-size:12px;color:var(--sub);margin-top:3px">${esc(sig)}<span class="${lc}">${esc(lt)}</span></div>
+      <ul>${d.reasons.map(r => `<li>${esc(r)}</li>`).join("")}</ul>
+      <div class="actions">${canTrack ? `<button class="btn small dark" data-act="track" data-id="${esc(d.id)}">위치 추적</button> ` : ""}
+        <button class="btn small green" data-act="record" data-id="${esc(d.id)}">기록</button></div></div></div>`;
+  }).join("");
+}
+
+/* 위치 추적 */
+function drawTrackGauge(p, color) {
+  const c = $("trackGauge"), g = c.getContext("2d");
+  g.clearRect(0, 0, c.width, c.height);
+  const cx = 160, cy = 150, r = 115;
+  g.lineWidth = 20; g.lineCap = "round";
+  g.strokeStyle = "#E2E8F0"; g.beginPath(); g.arc(cx, cy, r, Math.PI, 2 * Math.PI); g.stroke();
+  if (p > 0) { g.strokeStyle = color; g.beginPath(); g.arc(cx, cy, r, Math.PI, Math.PI + Math.PI * p / 100); g.stroke(); }
+  g.fillStyle = "#64748B"; g.font = "11px sans-serif"; g.textAlign = "center";
+  for (let i = 0; i <= 100; i += 25) {
+    const a = Math.PI + Math.PI * i / 100;
+    g.fillText(String(i), cx + (r - 26) * Math.cos(a), cy + (r - 26) * Math.sin(a) + 4);
+  }
+  g.fillStyle = p > 0 ? color : "#64748B"; g.font = "bold 38px sans-serif";
+  g.fillText(Math.round(p) + "%", cx, cy - 18);
+  g.fillStyle = "#64748B"; g.font = "12px sans-serif"; g.fillText("근접도", cx, cy + 4);
+}
+
+function startTrack(id) {
+  const d = mon.devices.get(id);
+  if (!d) return;
+  if (!mon.running) startMonitor();
+  mon.tracking = id;
+  $("trackName").textContent = "추적 대상: " + (d.name || "(이름 없음)");
+  $("trackBox").style.display = "block";
+  $("trackBox").scrollIntoView({ behavior: "smooth", block: "center" });
+  clearInterval(mon.trackTimer); clearTimeout(mon.vibeTimer);
+  mon.trackTimer = setInterval(updateTrack, 200);
+  vibeLoop();
+  updateTrack();
+  setStatus("위치 추적 중: " + (d.name || "(이름 없음)"));
+}
+function trackProximity() {
+  const d = mon.devices.get(mon.tracking);
+  if (!d || d.rssi == null || Date.now() - d.lastSeen > 5000) return 0;
+  return rssiToProximity(d.rssi);
+}
+function updateTrack() {
+  const d = mon.devices.get(mon.tracking);
+  if (!d) return;
+  const p = trackProximity();
+  if (p > 0) {
+    const [text, color] = proximityInfo(p);
+    drawTrackGauge(p, color);
+    $("trackText").textContent = text; $("trackText").style.color = color;
+    $("trackRssi").textContent = `평균 신호 세기 ${d.rssi} dBm · ${distanceHint(d.rssi)}`;
+  } else {
+    drawTrackGauge(0, "#CBD5E1");
+    $("trackText").textContent = "신호 없음 - 위치를 이동하십시오"; $("trackText").style.color = "var(--sub)";
+    $("trackRssi").textContent = "";
+  }
+}
+function vibeLoop() {
+  if (!mon.tracking) return;
+  const p = trackProximity();
+  if (p > 0 && $("trackVibe").checked) { try { navigator.vibrate && navigator.vibrate(60); } catch (e) {} }
+  mon.vibeTimer = setTimeout(vibeLoop, Math.round(1500 - p * 13));   // 가까울수록 빠르게
+}
+function stopTrack() {
+  if (!mon.tracking) return;
+  mon.tracking = null;
+  clearInterval(mon.trackTimer); clearTimeout(mon.vibeTimer);
+  $("trackBox").style.display = "none";
+}
+
+/* 웹: 브라우저 기기 선택 창 */
+function addManualDevice(name, matched) {
+  const id = "manual-" + Date.now();
+  const d = classifyDevice({ id, name: name || "", companyIds: new Set(), matched, manual: true, rssi: null,
+    time: new Date().toLocaleTimeString("ko-KR", { hour12: false }), lastSeen: Date.now() });
+  mon.devices.set(id, d);
+  renderDevices();
+  setStatus(`기기 확인: ${name || "(이름 없음)"} → ${LEVEL_LABEL[d.level]}`);
+  if (d.level === "danger") raiseAlert(d);
 }
 
 async function requestBle(glassesOnly) {
   if (state.sim) {
-    const pool = glassesOnly ? FAKE_DEVICES.filter(d => d.matched) : FAKE_DEVICES;
+    const pool = glassesOnly ? SIM_DEVICES.filter(d => d.companyIds.includes(0x01AB) || /meta/i.test(d.name)) : SIM_DEVICES;
     const d = pool[Math.floor(Math.random() * pool.length)];
-    addDevice(d.name, d.matched);
+    addManualDevice(d.name, glassesOnly);
     return;
   }
   if (!navigator.bluetooth) {
@@ -800,53 +1117,30 @@ async function requestBle(glassesOnly) {
       return;
     }
   } catch (e) {}
-
   let device;
   try {
     if (glassesOnly) {
       const nameFilters = NAME_PREFIXES.map(p => ({ namePrefix: p }));
       try {
         device = await navigator.bluetooth.requestDevice({ filters: [...nameFilters,
-          ...COMPANY_IDS.map(id => ({ manufacturerData: [{ companyIdentifier: id }] }))] });
+          ...Object.keys(GLASSES_COMPANY).map(id => ({ manufacturerData: [{ companyIdentifier: Number(id) }] }))] });
       } catch (err) {
         if (err.name !== "TypeError") throw err;
-        device = await navigator.bluetooth.requestDevice({ filters: nameFilters });  // 구형 크롬
+        device = await navigator.bluetooth.requestDevice({ filters: nameFilters });
       }
     } else {
       device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
     }
   } catch (err) {
-    if (err.name === "NotFoundError") {
+    if (err.name === "NotFoundError")
       setStatus(glassesOnly ? "선택이 취소되었습니다. 목록이 비어 있었다면 조건에 맞는 기기가 감지되지 않은 것입니다."
                             : "기기 선택이 취소되었습니다.");
-    } else if (err.name === "SecurityError") {
+    else if (err.name === "SecurityError")
       showModal({ title: "블루투스 사용 불가", message: "이 화면에서는 블루투스가 차단되어 있습니다.\nGitHub Pages 주소로 직접 여십시오." });
-    } else {
-      showModal({ title: "블루투스 오류", message: String(err.message || err) });
-    }
+    else showModal({ title: "블루투스 오류", message: String(err.message || err) });
     return;
   }
-  addDevice(device.name, glassesOnly);
-}
-
-function renderDevices() {
-  const list = $("deviceList");
-  $("cntAll").textContent = ble.devices.length;
-  $("cntDanger").textContent = ble.devices.filter(d => d.level === "danger").length;
-  $("cntCheck").textContent = ble.devices.filter(d => d.level === "check").length;
-  if (!ble.devices.length) { list.innerHTML = '<div class="empty">아직 확인한 기기가 없습니다.</div>'; return; }
-  list.innerHTML = "";
-  ble.devices.forEach(d => {
-    const el = document.createElement("div");
-    el.className = "device lv-" + d.level;
-    el.innerHTML = `<div class="bar"></div><div class="body">
-      <div class="top"><span class="name">${esc(d.name)}</span><span class="tag">${LEVEL_LABEL[d.level]}</span></div>
-      <ul>${d.reasons.map(r => `<li>${esc(r)}</li>`).join("")}<li style="color:var(--sub)">확인 시각 ${esc(d.time)}</li></ul>
-      <div class="actions"><button class="btn small green">기록</button></div></div>`;
-    el.querySelector("button").onclick = () =>
-      openRecordDialog(`[기기 찾기] ${d.name} - ${d.reasons.join("; ")}`, LEVEL_LABEL[d.level]);
-    list.appendChild(el);
-  });
+  addManualDevice(device.name, glassesOnly);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -968,8 +1262,23 @@ function buildCsv() {
     ["※ 본 기록은 감독 보조 프로그램의 참고 자료이며, 최종 판단은 감독관의 직접 확인에 따릅니다."]];
   return rows.map(r => r.map(q).join(",")).join("\r\n");
 }
-$("exportBtn").onclick = () => {
+$("exportBtn").onclick = async () => {
   if (!store.records.length) { showModal({ title: "CSV 저장", message: "저장된 점검 기록이 없습니다." }); return; }
+  const d0 = new Date(), p0 = n => String(n).padStart(2, "0");
+  const fileName = `AI안경_점검기록_${(store.room || "시험실").replace(/[\\/:*?"<>|]/g, "_")}_${d0.getFullYear()}${p0(d0.getMonth() + 1)}${p0(d0.getDate())}.csv`;
+  const P = IS_NATIVE && window.Capacitor.Plugins;
+  if (P && P.Filesystem && P.Share) {
+    try {
+      const res = await P.Filesystem.writeFile({ path: fileName, data: "\uFEFF" + buildCsv(),
+                                                 directory: "CACHE", encoding: "utf8" });
+      await P.Share.share({ title: "AI 안경 점검 기록", url: res.uri, dialogTitle: "점검 기록 보내기·저장" });
+      setStatus("CSV 파일을 만들었습니다. 저장하거나 보낼 곳을 선택하십시오.");
+    } catch (e) {
+      if (!/cancel/i.test(String(e && e.message || e)))
+        showModal({ title: "CSV 저장 실패", message: "파일을 만들 수 없습니다. [내용 복사]를 사용하십시오.\n(" + (e && e.message || e) + ")" });
+    }
+    return;
+  }
   try {
     const blob = new Blob(["﻿" + buildCsv()], { type: "text/csv;charset=utf-8" });  // 엑셀 한글 깨짐 방지
     const a = document.createElement("a");

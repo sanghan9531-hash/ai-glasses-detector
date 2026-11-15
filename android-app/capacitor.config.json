@@ -1,0 +1,8 @@
+{
+  "appId": "io.github.sanghan9531.aiglasses",
+  "appName": "AI 안경 탐지",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}
