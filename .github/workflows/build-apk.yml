@@ -1,0 +1,68 @@
+# 코드를 올릴 때마다 안드로이드 앱(APK)을 자동으로 만들고,
+# 고정 링크(android-latest)로 내려받을 수 있게 올린다.
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install packages
+        run: npm install
+
+      - name: Copy web app
+        run: |
+          mkdir -p www
+          cp ../index.html www/index.html
+
+      - name: Create Android project
+        run: |
+          npx cap add android
+          node scripts/patch-android.js
+          npx cap sync android
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../AIGlassesDetector.apk
+
+      - name: Upload APK (Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: AIGlassesDetector-android
+          path: android-app/AIGlassesDetector.apk
+
+      - name: Publish fixed download link
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete android-latest --cleanup-tag -y || true
+          gh release create android-latest AIGlassesDetector.apk \
+            --title "AI 안경 탐지 - 안드로이드 앱 (빌드 ${{ github.run_number }})" \
+            --notes "휴대폰에서 AIGlassesDetector.apk를 내려받아 설치하십시오. (출처를 알 수 없는 앱 설치 허용 필요)" \
+            --latest=false
