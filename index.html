@@ -35,8 +35,8 @@
     font-size: 12px; padding: 8px 16px; line-height: 1.5; display: none; }
 
   nav { display: flex; background: #E2E8F0; position: sticky; top: 0; z-index: 5; }
-  nav button { flex: 1; border: 0; background: transparent; padding: 12px 4px; font: inherit;
-    font-size: 13px; font-weight: 700; color: var(--accent); cursor: pointer;
+  nav button { flex: 1; border: 0; background: transparent; padding: 12px 2px; font: inherit;
+    font-size: 12.5px; white-space: nowrap; font-weight: 700; color: var(--accent); cursor: pointer;
     border-bottom: 3px solid transparent; }
   nav button.active { background: var(--card); color: var(--navy); border-bottom-color: var(--primary); }
 
@@ -134,6 +134,17 @@
   .live.on { color: var(--green); font-weight: 700; }
   .live.lost { color: var(--amber); }
   .divider { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
+  .near-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+  .near-grid > div { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 6px; text-align: center; }
+  .near-grid .t { font-size: 12px; color: var(--sub); }
+  .near-grid .v { font-size: 14px; font-weight: 700; margin-top: 4px; }
+  .near-grid .d { font-size: 11px; color: var(--sub); margin-top: 2px; min-height: 14px; }
+  .v.hit { color: var(--red); } .v.warn { color: var(--amber); } .v.ok { color: var(--green); } .v.na { color: var(--sub); }
+  .meter { height: 14px; background: #E2E8F0; border-radius: 7px; overflow: hidden; margin: 8px 0 4px; }
+  .meter div { height: 100%; width: 0; background: var(--green); transition: width .15s; }
+  .big { font-size: 34px; font-weight: 700; text-align: center; margin-top: 4px; }
+  .big small { font-size: 14px; color: var(--sub); font-weight: 500; }
   footer { font-size: 11.5px; color: var(--sub); text-align: center; padding: 12px 16px 18px; line-height: 1.6; }
   .status { background: #E2E8F0; color: var(--accent); font-size: 12px; padding: 7px 14px; }
 
@@ -165,6 +176,7 @@
   <nav>
     <button data-tab="lens" class="active">렌즈 탐지</button>
     <button data-tab="ble">전파 감시</button>
+    <button data-tab="near">근접 확인</button>
     <button data-tab="check">육안 점검</button>
     <button data-tab="records">점검 기록</button>
   </nav>
@@ -250,6 +262,50 @@
         <button class="btn block" id="findGlassesBtn">AI 안경 찾기</button>
         <div class="spacer"></div>
         <button class="btn block outline" id="allDevicesBtn">주변 기기 전체 보기</button>
+      </div>
+    </section>
+
+    <!-- ───────────── 근접 확인 ───────────── -->
+    <section id="tab-near">
+      <h2>근접 확인 (안경에 직접 대어 확인)</h2>
+      <div class="card steps">
+        <b>1.</b> 의심 안경을 책상 위에 올려 두게 합니다. (시험 중이면 교시 종료 후)<br>
+        <b>2.</b> 안경에서 30cm 이상 떨어진 곳에서 <b>[기준 측정]</b>을 누릅니다.<br>
+        <b>3.</b> 폰 <b>윗부분</b>을 안경다리 안쪽·바깥쪽에 <b>1~3cm</b>까지 천천히 가져갑니다.<br>
+        <b>4.</b> 아래 세 가지 결과를 종합하여 판단하고 기록합니다.
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content: space-between;">
+          <b style="font-size:14px">자석 센서 (스피커 자석)</b>
+          <span id="magState" class="live">꺼짐</span>
+        </div>
+        <div class="big"><span id="magDelta">-</span> <small>μT 변화</small></div>
+        <div class="meter"><div id="magBar"></div></div>
+        <div class="row" style="justify-content: space-between; font-size: 12px; color: var(--sub);">
+          <span>현재 <b id="magNow">-</b> μT · 기준 <b id="magBase">-</b> μT</span>
+          <span>최대 변화 <b id="magPeak" style="color:var(--text)">-</b> μT</span>
+        </div>
+        <div id="magVerdict" class="result" style="font-size:13.5px"></div>
+        <div class="row center">
+          <button class="btn" id="magStartBtn">센서 켜기</button>
+          <button class="btn dark" id="magBaseBtn">기준 측정</button>
+          <button class="btn gray" id="magResetBtn">최대값 초기화</button>
+        </div>
+        <p class="desc" style="margin:8px 0 0">금속 책상, 자석 폰케이스, 이어폰 근처에서는 값이 크게 나올 수 있습니다.
+          판정 기준값은 실제 AI 안경으로 검증이 필요합니다.</p>
+      </div>
+
+      <div class="near-grid">
+        <div><div class="t">블루투스 근접</div><div class="v na" id="nearBle">미확인</div><div class="d" id="nearBleD"></div></div>
+        <div><div class="t">렌즈 반사</div><div class="v na" id="nearLens">미확인</div><div class="d" id="nearLensD"></div></div>
+        <div><div class="t">자석</div><div class="v na" id="nearMag">미확인</div><div class="d" id="nearMagD"></div></div>
+      </div>
+      <div id="nearVerdict" class="verdict"></div>
+      <div class="row center">
+        <button class="btn dark" id="nearBleBtn">전파 감시 켜기</button>
+        <button class="btn dark" id="nearLensBtn">렌즈 확인하러 가기</button>
+        <button class="btn green" id="nearRecordBtn">종합 기록</button>
       </div>
     </section>
 
@@ -518,9 +574,28 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const state = { sim: false };
-const IS_NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" &&
-                     window.Capacitor.isNativePlatform());
-const BleNative = IS_NATIVE && window.Capacitor.Plugins ? window.Capacitor.Plugins.BluetoothLe : null;
+const IS_NATIVE = !!((window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" &&
+                      window.Capacitor.isNativePlatform()) || window.androidBridge);
+// 앱에서만: Capacitor 코어(capacitor.js)를 불러와 플러그인을 안정적으로 연결
+const capReady = new Promise(resolve => {
+  if (!IS_NATIVE || window.capacitorExports) return resolve();
+  const sc = document.createElement("script");
+  sc.src = "capacitor.js"; sc.onload = resolve; sc.onerror = resolve;
+  document.head.appendChild(sc);
+});
+const _plugins = {};
+function getPlugin(name) {
+  if (_plugins[name]) return _plugins[name];
+  let pl = null;
+  try {
+    if (window.capacitorExports && window.capacitorExports.registerPlugin) pl = window.capacitorExports.registerPlugin(name);
+  } catch (e) {}
+  const C = window.Capacitor;
+  if (!pl && C && C.Plugins && C.Plugins[name]) pl = C.Plugins[name];
+  if (!pl && C && typeof C.registerPlugin === "function") { try { pl = C.registerPlugin(name); } catch (e) {} }
+  if (pl) _plugins[name] = pl;
+  return pl;
+}
 document.querySelector("header p").textContent = "시험 감독 보조 프로그램 · " + (IS_NATIVE ? "앱" : "웹 버전");
 
 function setStatus(text) { $("status").textContent = text; }
@@ -577,6 +652,7 @@ function setSim(on) {
   stopCamera();
   clearBaseline();
   if (typeof resetMonitor === "function") resetMonitor();
+  if (typeof stopMag === "function" && mag.running) stopMag();
   setStatus(on ? "시뮬레이션 모드: 가상 영상과 가상 기기를 사용합니다."
                : "실제 모드: 카메라와 블루투스를 사용합니다.");
 }
@@ -917,7 +993,8 @@ async function startMonitor() {
       onScan({ id: dev.id, name: dev.name, companyIds: dev.companyIds, rssi: Math.round(next) });
     }, 150));
   } else {
-    const B = BleNative;
+    await capReady;
+    const B = getPlugin("BluetoothLe");
     if (!B) { showModal({ title: "블루투스 오류", message: "블루투스 기능을 불러오지 못했습니다." }); return; }
     try { await B.initialize({ androidNeverForLocation: true }); }
     catch (e) {
@@ -969,7 +1046,8 @@ async function stopMonitor() {
   mon.running = false;
   mon.timers.forEach(clearInterval); mon.timers = [];
   if (mon.listener) { try { await mon.listener.remove(); } catch (e) {} mon.listener = null; }
-  if (IS_NATIVE && BleNative && !state.sim) { try { await BleNative.stopLEScan(); } catch (e) {} }
+  const Bs = IS_NATIVE && !state.sim ? getPlugin("BluetoothLe") : null;
+  if (Bs) { try { await Bs.stopLEScan(); } catch (e) {} }
   try { if (mon.wakeLock) mon.wakeLock.release(); } catch (e) {}
   mon.wakeLock = null;
   stopTrack();
@@ -1144,6 +1222,175 @@ async function requestBle(glassesOnly) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   근접 확인: 자석 센서 + 근거리 블루투스 + 렌즈 결과 종합
+   ═══════════════════════════════════════════════════════════ */
+const MAG = { WARN: 20, HIT: 60, BASE_SAMPLES: 30 };   // μT (실기기 검증 필요)
+const mag = { running: false, listener: null, sensor: null, simTimer: 0, uiTimer: 0, base: null,
+              baseBuf: null, now: null, delta: 0, peak: 0, samples: [] };
+
+$("magStartBtn").onclick = () => mag.running ? stopMag() : startMag();
+$("magBaseBtn").onclick = () => {
+  if (!mag.running) { showModal({ title: "기준 측정", message: "센서를 먼저 켜십시오." }); return; }
+  mag.baseBuf = [];
+  $("magVerdict").textContent = "기준 측정 중... 안경에서 30cm 이상 떨어진 채로 폰을 움직이지 마십시오.";
+  $("magVerdict").className = "result info";
+};
+$("magResetBtn").onclick = () => { mag.peak = 0; updateMagUI(); };
+$("nearBleBtn").onclick = () => {
+  if (!IS_NATIVE && !state.sim) {
+    showModal({ title: "블루투스 근접", message: "블루투스 근접 확인은 앱에서만 동작합니다.\n(시뮬레이션 모드에서는 체험할 수 있습니다.)" });
+    return;
+  }
+  if (!mon.running) startMonitor();
+};
+$("nearLensBtn").onclick = () => document.querySelector('nav button[data-tab="lens"]').click();
+$("nearRecordBtn").onclick = () => {
+  const s = nearSummary();
+  openRecordDialog(`[근접 확인] 블루투스: ${s.ble.text}${s.ble.detail ? " (" + s.ble.detail + ")" : ""} / ` +
+    `렌즈: ${s.lens.text} / 자석: ${s.mag.text}${s.mag.detail ? " (" + s.mag.detail + ")" : ""}`, s.level);
+};
+
+function onMagReading(x, y, z) {
+  const m = Math.sqrt(x * x + y * y + z * z);   // 방향과 무관한 세기
+  mag.samples.push(m); if (mag.samples.length > 4) mag.samples.shift();
+  mag.now = mag.samples.reduce((a, b) => a + b, 0) / mag.samples.length;
+  if (mag.baseBuf) {
+    mag.baseBuf.push(mag.now);
+    if (mag.baseBuf.length >= MAG.BASE_SAMPLES) {
+      mag.base = mag.baseBuf.reduce((a, b) => a + b, 0) / mag.baseBuf.length;
+      mag.baseBuf = null; mag.peak = 0;
+      setStatus("자석 센서 기준 측정 완료. 이제 폰 윗부분을 안경다리에 가까이 대십시오.");
+    }
+  }
+  if (mag.base != null && !mag.baseBuf) {
+    mag.delta = Math.abs(mag.now - mag.base);
+    if (mag.delta > mag.peak) {
+      if (mag.peak < MAG.HIT && mag.delta >= MAG.HIT) { try { navigator.vibrate && navigator.vibrate(150); } catch (e) {} }
+      mag.peak = mag.delta;
+    }
+  }
+}
+
+async function startMag() {
+  mag.samples = []; mag.base = null; mag.baseBuf = null; mag.peak = 0; mag.delta = 0;
+  if (state.sim) {
+    // 시뮬레이션: 기준 약 48μT, 6초마다 2초 동안 안경다리에 대는 상황
+    const t0 = performance.now();
+    mag.simTimer = setInterval(() => {
+      const t = ((performance.now() - t0) / 1000) % 6;
+      const extra = t > 4 ? 130 * Math.sin((t - 4) / 2 * Math.PI) : 0;
+      const n = () => (Math.random() - 0.5) * 2;
+      onMagReading(30 + extra * 0.6 + n(), 20 + extra * 0.5 + n(), 31 + extra * 0.6 + n());
+    }, 50);
+  } else if (IS_NATIVE) {
+    await capReady;
+    const M = getPlugin("Magnetometer");
+    try {
+      const av = M ? await M.isAvailable() : null;
+      if (!av || !av.available) throw new Error("이 기기에는 자기장 센서가 없습니다.");
+      mag.listener = await M.addListener("reading", r => onMagReading(r.x, r.y, r.z));
+      await M.start();
+    } catch (e) {
+      showModal({ title: "자석 센서 오류", message: String(e && e.message || e) });
+      return;
+    }
+  } else if ("Magnetometer" in window) {
+    try {
+      mag.sensor = new window.Magnetometer({ frequency: 20 });
+      mag.sensor.addEventListener("reading", () => onMagReading(mag.sensor.x, mag.sensor.y, mag.sensor.z));
+      mag.sensor.addEventListener("error", ev => {
+        stopMag(); showModal({ title: "자석 센서 오류", message: String(ev.error && ev.error.message || ev.error) });
+      });
+      mag.sensor.start();
+    } catch (e) {
+      showModal({ title: "자석 센서", message: "이 브라우저에서는 자석 센서를 사용할 수 없습니다. 앱을 사용하십시오." });
+      return;
+    }
+  } else {
+    showModal({ title: "자석 센서", message: "자석 센서는 앱에서만 동작합니다.\n(시뮬레이션 모드에서는 체험할 수 있습니다.)" });
+    return;
+  }
+  mag.running = true;
+  $("magStartBtn").textContent = "센서 끄기"; $("magStartBtn").classList.add("red");
+  $("magState").textContent = "측정 중" + (state.sim ? " (시뮬레이션)" : ""); $("magState").className = "live on";
+  mag.uiTimer = setInterval(() => { updateMagUI(); updateNear(); }, 150);
+  $("magBaseBtn").click();   // 켜자마자 기준 측정
+}
+
+async function stopMag() {
+  mag.running = false;
+  clearInterval(mag.simTimer); clearInterval(mag.uiTimer);
+  if (mag.listener) { try { await mag.listener.remove(); } catch (e) {} mag.listener = null; }
+  if (IS_NATIVE && !state.sim) { const M = getPlugin("Magnetometer"); if (M) { try { await M.stop(); } catch (e) {} } }
+  if (mag.sensor) { try { mag.sensor.stop(); } catch (e) {} mag.sensor = null; }
+  $("magStartBtn").textContent = "센서 켜기"; $("magStartBtn").classList.remove("red");
+  $("magState").textContent = "꺼짐"; $("magState").className = "live";
+  updateMagUI(); updateNear();
+}
+
+function magLevel(v) { return v >= MAG.HIT ? "hit" : v >= MAG.WARN ? "warn" : "ok"; }
+function updateMagUI() {
+  const f = v => v == null ? "-" : v.toFixed(0);
+  $("magNow").textContent = f(mag.now); $("magBase").textContent = f(mag.base);
+  $("magPeak").textContent = mag.base != null ? f(mag.peak) : "-";
+  $("magDelta").textContent = mag.base != null && !mag.baseBuf ? f(mag.delta) : "-";
+  const bar = $("magBar"), pct = Math.min(100, mag.delta / (MAG.HIT * 1.5) * 100);
+  bar.style.width = (mag.base != null ? pct : 0) + "%";
+  const lv = magLevel(mag.delta);
+  bar.style.background = lv === "hit" ? "var(--red)" : lv === "warn" ? "var(--amber)" : "var(--green)";
+  if (mag.baseBuf) return;
+  const el = $("magVerdict");
+  if (mag.base == null) { el.textContent = ""; return; }
+  const pl = magLevel(mag.peak);
+  el.className = "result " + (pl === "hit" ? "danger" : pl === "warn" ? "warn" : "ok");
+  el.textContent = pl === "hit" ? "강한 자기장 감지 - 스피커 자석 의심 (주변 금속·자석 여부 확인)"
+                 : pl === "warn" ? "약한 자기장 변화 - 위치를 바꿔 다시 확인하십시오"
+                 : "자기장 변화 없음";
+}
+
+function nearSummary() {
+  // 블루투스: 실시간 수신 중인 위험 기기 중 가장 센 신호
+  let ble = { text: "미확인", cls: "na", detail: "" };
+  if (mon.running) {
+    const now = Date.now();
+    const live = [...mon.devices.values()].filter(d => !d.manual && d.level === "danger" && now - d.lastSeen < 5000)
+      .sort((a, b) => b.rssi - a.rssi);
+    if (!live.length) ble = { text: "감지 안 됨", cls: "ok", detail: "AI 안경 신호 없음" };
+    else {
+      const d = live[0];
+      ble = d.rssi >= -50 ? { text: "바로 앞 감지", cls: "hit", detail: `${d.name || "(이름 없음)"} ${d.rssi}dBm` }
+                          : { text: "주변 감지", cls: "warn", detail: `${d.name || "(이름 없음)"} ${d.rssi}dBm` };
+    }
+  }
+  let lensR = { text: "미확인", cls: "na", detail: "" };
+  if (lens.running) lensR = lens.count ? { text: `반사 ${lens.count}곳`, cls: "hit", detail: "" }
+                                       : { text: "반사 없음", cls: "ok", detail: "" };
+  let magR = { text: "미확인", cls: "na", detail: "" };
+  if (mag.base != null) {
+    const pl = magLevel(mag.peak);
+    magR = { text: pl === "hit" ? "강한 반응" : pl === "warn" ? "약한 반응" : "반응 없음",
+             cls: pl === "hit" ? "hit" : pl === "warn" ? "warn" : "ok", detail: `최대 ${mag.peak.toFixed(0)}μT` };
+  }
+  const hits = [ble, lensR, magR].filter(x => x.cls === "hit").length;
+  const warns = [ble, lensR, magR].filter(x => x.cls === "warn").length;
+  const checked = [ble, lensR, magR].filter(x => x.cls !== "na").length;
+  let level = "이상 없음", verdict = "", color = "var(--sub)";
+  if (!checked) verdict = "확인 항목을 하나 이상 실행하십시오.";
+  else if (hits >= 2) { level = "위험"; verdict = `${hits}개 항목에서 강한 반응 - AI 안경일 가능성이 높습니다. 공식 절차에 따라 확인하십시오.`; color = "var(--red)"; }
+  else if (hits === 1 || warns) { level = "주의"; verdict = "일부 항목에서 반응 - 다른 항목으로 추가 확인하십시오."; color = "var(--amber)"; }
+  else { verdict = `확인한 ${checked}개 항목에서 반응 없음`; color = "var(--green)"; }
+  return { ble, lens: lensR, mag: magR, level, verdict, color };
+}
+function updateNear() {
+  const s = nearSummary();
+  for (const [id, r] of [["nearBle", s.ble], ["nearLens", s.lens], ["nearMag", s.mag]]) {
+    $(id).textContent = r.text; $(id).className = "v " + r.cls; $(id + "D").textContent = r.detail;
+  }
+  $("nearVerdict").textContent = s.verdict; $("nearVerdict").style.color = s.color;
+}
+setInterval(() => { if (document.getElementById("tab-near").classList.contains("active")) updateNear(); }, 1000);
+
+/* ═══════════════════════════════════════════════════════════
    육안 점검
    ═══════════════════════════════════════════════════════════ */
 $("checklist").innerHTML = CHECKLIST.map((item, i) =>
@@ -1266,12 +1513,13 @@ $("exportBtn").onclick = async () => {
   if (!store.records.length) { showModal({ title: "CSV 저장", message: "저장된 점검 기록이 없습니다." }); return; }
   const d0 = new Date(), p0 = n => String(n).padStart(2, "0");
   const fileName = `AI안경_점검기록_${(store.room || "시험실").replace(/[\\/:*?"<>|]/g, "_")}_${d0.getFullYear()}${p0(d0.getMonth() + 1)}${p0(d0.getDate())}.csv`;
-  const P = IS_NATIVE && window.Capacitor.Plugins;
-  if (P && P.Filesystem && P.Share) {
+  if (IS_NATIVE) await capReady;
+  const FS = IS_NATIVE ? getPlugin("Filesystem") : null, SH = IS_NATIVE ? getPlugin("Share") : null;
+  if (FS && SH) {
     try {
-      const res = await P.Filesystem.writeFile({ path: fileName, data: "\uFEFF" + buildCsv(),
+      const res = await FS.writeFile({ path: fileName, data: "\uFEFF" + buildCsv(),
                                                  directory: "CACHE", encoding: "utf8" });
-      await P.Share.share({ title: "AI 안경 점검 기록", url: res.uri, dialogTitle: "점검 기록 보내기·저장" });
+      await SH.share({ title: "AI 안경 점검 기록", url: res.uri, dialogTitle: "점검 기록 보내기·저장" });
       setStatus("CSV 파일을 만들었습니다. 저장하거나 보낼 곳을 선택하십시오.");
     } catch (e) {
       if (!/cancel/i.test(String(e && e.message || e)))
