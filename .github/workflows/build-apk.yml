@@ -38,6 +38,7 @@ jobs:
         run: |
           mkdir -p www
           cp ../index.html www/index.html
+          cp node_modules/@capacitor/core/dist/capacitor.js www/capacitor.js
 
       - name: Create Android project
         run: |
