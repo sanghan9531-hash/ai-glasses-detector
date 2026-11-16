@@ -116,3 +116,41 @@ public class MainActivity extends BridgeActivity {
 }
 `);
 console.log("자기장 센서 플러그인 추가:", javaDir);
+
+// ── 3) 앱 아이콘·시작 화면 ───────────────────────────────
+const resSrc = path.join(__dirname, "..", "resources", "res");
+if (fs.existsSync(resSrc)) {
+  fs.cpSync(resSrc, path.join(appDir, "res"), { recursive: true, force: true });
+  const bgFile = path.join(appDir, "res", "values", "ic_launcher_background.xml");
+  fs.mkdirSync(path.dirname(bgFile), { recursive: true });
+  fs.writeFileSync(bgFile, '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n' +
+    '    <color name="ic_launcher_background">#172554</color>\n</resources>\n');
+  console.log("앱 아이콘·시작 화면 교체 완료");
+}
+
+// ── 4) 플레이스토어 요구 사항: Android 16 (API 36) 대상 ───
+const androidDir = path.join(__dirname, "..", "android");
+const varsPath = path.join(androidDir, "variables.gradle");
+if (fs.existsSync(varsPath)) {
+  let v = fs.readFileSync(varsPath, "utf8");
+  v = v.replace(/(compileSdkVersion\s*=\s*)\d+/, "$136").replace(/(targetSdkVersion\s*=\s*)\d+/, "$136");
+  fs.writeFileSync(varsPath, v);
+  console.log("compileSdk/targetSdk → 36");
+}
+const propsPath = path.join(androidDir, "gradle.properties");
+if (fs.existsSync(propsPath)) {
+  let gp = fs.readFileSync(propsPath, "utf8");
+  if (!gp.includes("android.suppressUnsupportedCompileSdk")) {
+    fs.writeFileSync(propsPath, gp.trimEnd() + "\nandroid.suppressUnsupportedCompileSdk=36\n");
+  }
+}
+
+// ── 5) 출시용 버전 번호 (출시 빌드에서만 환경변수로 전달) ──
+const buildGradle = path.join(androidDir, "app", "build.gradle");
+if (process.env.VERSION_CODE && fs.existsSync(buildGradle)) {
+  let g = fs.readFileSync(buildGradle, "utf8");
+  g = g.replace(/versionCode\s+\d+/, "versionCode " + parseInt(process.env.VERSION_CODE, 10));
+  if (process.env.VERSION_NAME) g = g.replace(/versionName\s+"[^"]*"/, `versionName "${process.env.VERSION_NAME}"`);
+  fs.writeFileSync(buildGradle, g);
+  console.log("버전:", process.env.VERSION_CODE, process.env.VERSION_NAME || "");
+}
