@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#1E293B">
-<title>AI 안경 탐지 시스템</title>
+<title>아이캐치 - 시험 전자기기 탐지</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -27,6 +27,9 @@
   .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 8px;
     border-radius: 4px; background: #166534; color: #fff; }
   .badge.sim { background: var(--amber); }
+  .mode { display: none; }
+  body.dev .mode, body.sim .mode { display: block; }
+  header h1 { cursor: default; user-select: none; -webkit-user-select: none; }
   .switch { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #CBD5E1;
     margin-top: 6px; cursor: pointer; justify-content: flex-end; }
   .switch input { width: 16px; height: 16px; accent-color: var(--amber); }
@@ -98,6 +101,8 @@
   .lv-danger { background: var(--red-bg); } .lv-danger .bar, .lv-danger .tag { background: var(--red); }
   .lv-check { background: var(--amber-bg); } .lv-check .bar, .lv-check .tag { background: var(--amber); }
   .lv-normal .bar, .lv-normal .tag { background: var(--sub); }
+  .lv-allowed { opacity: .6; } .lv-allowed .bar, .lv-allowed .tag { background: #94A3B8; }
+  .device .cat { font-size: 11px; font-weight: 700; color: var(--primary); background: #DBEAFE; padding: 1px 6px; border-radius: 4px; margin-left: 4px; white-space: nowrap; }
 
   .empty { text-align: center; color: var(--sub); font-size: 13px; padding: 30px 10px; line-height: 1.7; }
 
@@ -163,8 +168,8 @@
 <div class="wrap">
   <header>
     <div>
-      <h1>AI 안경 탐지 시스템</h1>
-      <p>시험 감독 보조 프로그램 · 웹 버전</p>
+      <h1>아이캐치 <span style="font-size:12px;font-weight:500;color:#94A3B8">EyeCatch</span></h1>
+      <p>시험 부정행위 기기 탐지 · 감독 보조 · 웹 버전</p>
     </div>
     <div class="mode">
       <span id="modeBadge" class="badge">실제 모드</span>
@@ -223,13 +228,17 @@
 
     <!-- ───────────── 전파 감시 ───────────── -->
     <section id="tab-ble">
-      <h2>블루투스 전파 감시</h2>
+      <h2>블루투스 전파 감시 (안경·이어폰·워치·휴대폰)</h2>
       <p class="desc" id="bleDesc"></p>
 
       <button class="btn block" id="monitorBtn">감시 시작</button>
       <div class="row" style="justify-content: space-between; margin-top: 6px;">
         <span id="monitorState" class="live">감시 중지됨</span>
-        <label class="check-inline"><input type="checkbox" id="showNormalDev"> 일반 기기 표시</label>
+        <label class="check-inline"><input type="checkbox" id="showNormalDev"> 일반·허용 기기 표시</label>
+      </div>
+      <div class="row" style="justify-content: space-between; margin-top: 4px;">
+        <label class="check-inline"><input type="checkbox" id="strictMode" checked> <b>시험장 모드</b>: 이어폰·워치·휴대폰도 표시</label>
+        <button class="btn small outline" id="allowAllBtn">현재 기기 모두 허용</button>
       </div>
 
       <div id="alertBanner" class="alert"></div>
@@ -267,17 +276,20 @@
 
     <!-- ───────────── 근접 확인 ───────────── -->
     <section id="tab-near">
-      <h2>근접 확인 (안경에 직접 대어 확인)</h2>
+      <h2>근접 확인 (의심 부위에 직접 대어 확인)</h2>
       <div class="card steps">
-        <b>1.</b> 의심 안경을 책상 위에 올려 두게 합니다. (시험 중이면 교시 종료 후)<br>
-        <b>2.</b> 안경에서 30cm 이상 떨어진 곳에서 <b>[기준 측정]</b>을 누릅니다.<br>
-        <b>3.</b> 폰 <b>윗부분</b>을 안경다리 안쪽·바깥쪽에 <b>1~3cm</b>까지 천천히 가져갑니다.<br>
+        <b>1.</b> 시험 중이면 교시 종료 후, 의심 수험생에게 확인 사유를 알립니다.<br>
+        <b>2.</b> 의심 부위에서 30cm 이상 떨어진 곳에서 <b>[기준 측정]</b>을 누릅니다.<br>
+        <b>3.</b> 폰 <b>윗부분</b>을 천천히 <b>1~3cm</b>까지 가져갑니다.<br>
+        &nbsp;&nbsp;· <b>안경</b>: 책상에 벗어 놓게 한 뒤 안경다리 안쪽·바깥쪽<br>
+        &nbsp;&nbsp;· <b>초소형 이어폰</b>: 양쪽 귀 주변 (신체에 닿지 않게)<br>
+        &nbsp;&nbsp;· <b>목걸이형 루프·숨긴 기기</b>: 목 주변, 소매, 필통·옷 주머니 근처<br>
         <b>4.</b> 아래 세 가지 결과를 종합하여 판단하고 기록합니다.
       </div>
 
       <div class="card">
         <div class="row" style="justify-content: space-between;">
-          <b style="font-size:14px">자석 센서 (스피커 자석)</b>
+          <b style="font-size:14px">자석 센서 (안경·이어폰 스피커 자석)</b>
           <span id="magState" class="live">꺼짐</span>
         </div>
         <div class="big"><span id="magDelta">-</span> <small>μT 변화</small></div>
@@ -312,7 +324,7 @@
     <!-- ───────────── 육안 점검 ───────────── -->
     <section id="tab-check">
       <h2>육안 점검 항목</h2>
-      <p class="desc">점검 대상 수험생의 안경 및 행동을 확인하고 해당 항목에 표시하십시오.</p>
+      <p class="desc">점검 대상 수험생의 안경, 귀, 목, 손목, 소지품과 행동을 확인하고 해당 항목에 표시하십시오.</p>
       <div class="card checklist" id="checklist"></div>
       <div class="verdict" id="verdict"></div>
       <div class="row center">
@@ -562,9 +574,13 @@ const CHECKLIST = [
   "안경 다리를 반복적으로 만지거나 누른다",
   "작은 소리로 혼잣말을 한다 (음성 명령 의심)",
   "렌즈 안쪽에 화면이나 글자가 비친다",
-  "스마트워치, 이어폰 등 다른 전자기기를 착용하고 있다",
+  "귀 안쪽에 작은 이어폰(살색·검은색 알갱이)이 보인다",
+  "목에 얇은 줄(목걸이형 루프)이 있거나 옷 속으로 선이 이어진다",
+  "귀를 자주 만지거나 고개를 한쪽으로 기울인다",
+  "손목에 스마트워치·스마트밴드를 차고 있다",
+  "옷·소매·필통 등에 숨긴 휴대폰이나 기기가 보인다",
 ];
-const LEVEL_LABEL = { danger: "위험", check: "주의", normal: "일반" };
+const LEVEL_LABEL = { danger: "위험", check: "주의", normal: "일반", allowed: "허용" };
 const STORE_KEY = "aiGlassesDetector.v1";
 
 /* ═══════════════════════════════════════════════════════════
@@ -596,7 +612,7 @@ function getPlugin(name) {
   if (pl) _plugins[name] = pl;
   return pl;
 }
-document.querySelector("header p").textContent = "시험 감독 보조 프로그램 · " + (IS_NATIVE ? "앱" : "웹 버전");
+document.querySelector("header p").textContent = "시험 부정행위 기기 탐지 · 감독 보조 · " + (IS_NATIVE ? "앱" : "웹 버전");
 
 function setStatus(text) { $("status").textContent = text; }
 
@@ -642,11 +658,29 @@ document.querySelectorAll("nav button").forEach(btn => btn.onclick = () => {
     s.classList.toggle("active", s.id === "tab-" + btn.dataset.tab));
 });
 
+/* 개발자 모드 (시뮬레이션 숨김)
+   - 평소에는 시뮬레이션 스위치가 보이지 않음
+   - 상단 제목을 3초 안에 7번 누르거나, 웹 주소 끝에 #demo 를 붙이면 나타남 */
+const dev = { taps: [], on: false };
+function setDev(on) {
+  dev.on = on;
+  document.body.classList.toggle("dev", on);
+  if (!on && state.sim) setSim(false);
+  setStatus(on ? "개발자 모드: 시뮬레이션 스위치가 표시됩니다. (제목 7번 누르면 숨김)" : "개발자 모드를 껐습니다.");
+}
+document.querySelector("header h1").addEventListener("click", () => {
+  const now = Date.now();
+  dev.taps = dev.taps.filter(t => now - t < 3000); dev.taps.push(now);
+  if (dev.taps.length >= 7) { dev.taps = []; setDev(!dev.on); }
+});
+if (location.hash === "#demo") setTimeout(() => setDev(true), 0);
+
 /* 시뮬레이션 모드 */
 $("simToggle").onchange = e => setSim(e.target.checked);
 function setSim(on) {
   state.sim = on;
   $("simToggle").checked = on;
+  document.body.classList.toggle("sim", on);
   $("modeBadge").textContent = on ? "시뮬레이션" : "실제 모드";
   $("modeBadge").classList.toggle("sim", on);
   stopCamera();
@@ -739,6 +773,7 @@ async function startCamera() {
 }
 
 function offerSim(title, message) {
+  if (!dev.on) { showModal({ title, message }); return; }
   showModal({ title, message: message + "\n\n시뮬레이션 모드로 기능을 확인하시겠습니까?",
     buttons: [{ label: "닫기", kind: "outline" },
               { label: "시뮬레이션 실행", onClick: () => { setSim(true); startCamera(); } }] });
@@ -877,6 +912,9 @@ const SIM_DEVICES = [
   { id: "SIM-04", name: "Galaxy Buds2 Pro", companyIds: [0x0075], base: -72 },
   { id: "SIM-05", name: "", companyIds: [0x01AB], base: -80 },    // 이름을 숨긴 메타 기기
   { id: "SIM-06", name: "LG TV", companyIds: [], base: -86 },
+  { id: "SIM-07", name: "Galaxy Watch6", companyIds: [0x0075], base: -64 },
+  { id: "SIM-08", name: "", companyIds: [0x004C], appleType: 0x07, base: -58 },   // 이름 없는 에어팟
+  { id: "SIM-09", name: "", companyIds: [], uuids: ["0000fe2c-0000-1000-8000-00805f9b34fb"], base: -60 },  // Fast Pair 이어폰
 ];
 const hex4 = n => "0x" + n.toString(16).toUpperCase().padStart(4, "0");
 
@@ -893,23 +931,56 @@ function proximityInfo(p) {
   return ["멂", "#1D4ED8"];
 }
 
+// 기기 종류 판별용 단어 (소문자)
+const EAR_WORDS = ["airpods", "buds", "earbud", "earphone", "pods", "beats", "headset", "headphone", "tws",
+  "qcy", "jabra", "soundcore", "bose", "wf-", "wh-", "neckband", "loop", "이어폰", "버즈", "헤드셋", "넥밴드"];
+const WATCH_WORDS = ["watch", "band", "fitbit", "amazfit", "garmin", "gear", "워치", "밴드"];
+const PHONE_WORDS = ["iphone", "ipad", "galaxy", "pixel", "phone", "tab", "갤럭시", "아이폰", "폰"];
+const FAST_PAIR_UUID = "0000fe2c-0000-1000-8000-00805f9b34fb";   // 구글 Fast Pair: 주로 무선 이어폰
+const CATEGORY = { glasses: "AI 안경", ear: "이어폰", watch: "스마트워치", phone: "휴대폰·태블릿",
+                   apple: "Apple 기기", samsung: "삼성 기기", tracker: "추적 태그", other: "기타 기기", unknown: "미확인" };
+const BANNED = new Set(["ear", "watch", "phone", "apple", "samsung"]);   // 시험장 반입 금지 기기
+const strict = { on: true, allow: new Set() };
+try { strict.on = localStorage.getItem("eyecatch.strict") !== "0"; } catch (e) {}
+
+function deviceKey(d) { return d.name ? "name:" + d.name : "id:" + d.id; }
+
 function classifyDevice(d) {
-  let score = 0;
+  let score = 0, cat = "unknown";
   const reasons = [], lower = (d.name || "").toLowerCase();
-  const word = GLASSES_NAMES.find(w => lower.includes(w));
-  if (word) { score += 50; reasons.push(`기기명에 '${word}' 포함`); }
+  const has = list => list.find(w => lower.includes(w));
+  // 1) AI 안경
+  const gw = has(GLASSES_NAMES);
+  if (gw) { score += 50; reasons.push(`기기명에 '${gw}' 포함`); cat = "glasses"; }
   for (const id of d.companyIds) {
-    if (GLASSES_COMPANY[id]) { score += 50; reasons.push(`제조사 ID 일치: ${GLASSES_COMPANY[id]} (${hex4(id)})`); }
-    else if (NORMAL_COMPANY[id]) reasons.push(`일반 기기 제조사: ${NORMAL_COMPANY[id]}`);
+    if (GLASSES_COMPANY[id]) { score += 50; reasons.push(`제조사 ID 일치: ${GLASSES_COMPANY[id]} (${hex4(id)})`); cat = "glasses"; }
   }
-  if (d.matched) { score += 50; reasons.push("AI 안경 검색 조건(이름·제조사)과 일치"); }
+  if (d.matched) { score += 50; reasons.push("AI 안경 검색 조건(이름·제조사)과 일치"); cat = "glasses"; }
+  // 2) 그 밖의 전자기기 종류
+  if (cat !== "glasses") {
+    const ew = has(EAR_WORDS), ww = has(WATCH_WORDS), pw = has(PHONE_WORDS);
+    if (ew) { cat = "ear"; reasons.push(`기기명에 '${ew}' 포함 - 무선 이어폰`); }
+    else if ((d.uuids || []).includes(FAST_PAIR_UUID)) { cat = "ear"; reasons.push("Fast Pair 신호 - 무선 이어폰 계열"); }
+    else if (d.appleType === 0x07) { cat = "ear"; reasons.push("Apple 페어링 신호 - 에어팟·비츠 계열 이어폰"); }
+    else if (ww) { cat = "watch"; reasons.push(`기기명에 '${ww}' 포함 - 스마트워치·밴드`); }
+    else if (pw) { cat = "phone"; reasons.push(`기기명에 '${pw}' 포함 - 휴대폰·태블릿`); }
+    else if (d.appleType === 0x12) { cat = "tracker"; reasons.push("Apple 나의 찾기 신호 - 에어태그 등"); }
+    else if ([0x10, 0x0C, 0x0F, 0x09].includes(d.appleType)) { cat = "apple"; reasons.push("Apple 기기 신호 - 아이폰·아이패드·애플워치 등"); }
+    else if (d.companyIds.has && d.companyIds.has(0x004C)) { cat = "apple"; reasons.push("제조사: Apple"); }
+    else if (d.companyIds.has && d.companyIds.has(0x0075)) { cat = "samsung"; reasons.push("제조사: Samsung - 휴대폰·이어폰·워치 등"); }
+    else if (d.companyIds.has && d.companyIds.has(0x0006)) { cat = "other"; reasons.push("제조사: Microsoft - PC·노트북 등"); }
+    else if (d.name) cat = "other";
+  }
+  // 3) 위험도
   let level = "normal";
   if (score >= 50) level = "danger";
-  else if (!d.name && !reasons.length && (d.rssi == null || d.rssi >= -60)) {
+  else if (strict.on && BANNED.has(cat)) { level = "check"; reasons.push("시험장 반입 금지 기기 - 소지 여부 확인"); }
+  else if (!d.name && cat === "unknown" && (d.rssi == null || d.rssi >= -60)) {
     level = "check";
     reasons.push(d.rssi == null ? "기기명을 확인할 수 없음 - 직접 확인 필요" : "식별 불가 기기가 근거리에서 감지됨");
   }
-  d.score = score; d.level = level; d.reasons = reasons;
+  if (level !== "danger" && strict.allow.has(deviceKey(d))) { level = "allowed"; reasons.push("허용 기기로 등록됨"); }
+  d.score = score; d.level = level; d.reasons = reasons; d.cat = cat;
   return d;
 }
 
@@ -919,14 +990,29 @@ const mon = { running: false, devices: new Map(), listener: null, timers: [], al
 (function setupBleTab() {
   $("bleDesc").innerHTML = IS_NATIVE
     ? "교탁 등에 기기를 두고 <b>[감시 시작]</b>을 누르면 주변 블루투스 신호를 계속 감시합니다. " +
-      "AI 안경 신호가 감지되면 <b>진동으로 알립니다.</b> 감시 중에는 화면을 켜 두십시오."
+      "AI 안경, 무선 이어폰, 스마트워치, 휴대폰 신호가 감지되면 <b>진동으로 알립니다.</b> " +
+      "휴대폰을 걷은 뒤 <b>[현재 기기 모두 허용]</b>으로 감독관·보관함 기기를 제외하십시오. 감시 중에는 화면을 켜 두십시오."
     : "자동 감시와 위치 추적은 <b>설치형 앱에서만</b> 동작합니다. 웹에서는 아래 기기 선택 창 방식을 사용하십시오. " +
-      "(시뮬레이션 모드에서는 자동 감시를 체험할 수 있습니다.)";
+      "";
   $("webChooser").style.display = IS_NATIVE ? "none" : "block";
 })();
 
 $("monitorBtn").onclick = () => mon.running ? stopMonitor() : startMonitor();
 $("showNormalDev").onchange = renderDevices;
+$("strictMode").checked = strict.on;
+$("strictMode").onchange = e => {
+  strict.on = e.target.checked;
+  try { localStorage.setItem("eyecatch.strict", strict.on ? "1" : "0"); } catch (err) {}
+  reclassifyAll();
+};
+$("allowAllBtn").onclick = () => {
+  const list = [...mon.devices.values()].filter(d => d.level === "check" || d.level === "normal");
+  if (!list.length) { showModal({ title: "현재 기기 모두 허용", message: "허용할 기기가 없습니다. 감시를 먼저 시작하십시오." }); return; }
+  confirmModal("현재 기기 모두 허용",
+    `지금 감지된 기기 ${list.length}개를 허용 기기로 등록합니다.\n` +
+    "휴대폰을 걷은 뒤, 감독관 기기와 보관함 기기만 있는 상태에서 누르십시오.\n(AI 안경 의심 기기는 허용되지 않습니다.)",
+    "모두 허용", () => { list.forEach(d => strict.allow.add(deviceKey(d))); reclassifyAll(); setStatus(`허용 기기 ${list.length}개 등록`); }, "");
+};
 $("findGlassesBtn").onclick = () => requestBle(true);
 $("allDevicesBtn").onclick = () => requestBle(false);
 $("trackStopBtn").onclick = stopTrack;
@@ -942,9 +1028,13 @@ $("deviceList").addEventListener("click", e => {
   const d = mon.devices.get(btn.dataset.id);
   if (!d) return;
   if (btn.dataset.act === "track") startTrack(d.id);
+  else if (btn.dataset.act === "allow") { strict.allow.add(deviceKey(d)); reclassifyAll(); setStatus(`허용 기기로 등록: ${d.name || "(이름 없음)"}`); }
+  else if (btn.dataset.act === "unallow") { strict.allow.delete(deviceKey(d)); reclassifyAll(); }
   else openRecordDialog(`[전파 감시] ${d.name || "(이름 없음)"}` +
     (d.rssi != null ? ` (${d.rssi} dBm)` : "") + " - " + d.reasons.join("; "), LEVEL_LABEL[d.level]);
 });
+
+function reclassifyAll() { mon.devices.forEach(classifyDevice); renderDevices(); }
 
 function onScan(s) {
   const now = Date.now();
@@ -952,11 +1042,13 @@ function onScan(s) {
   if (!d) { d = { id: s.id, name: "", companyIds: new Set(), samples: [], firstSeen: now }; mon.devices.set(s.id, d); }
   if (s.name) d.name = s.name;
   (s.companyIds || []).forEach(c => d.companyIds.add(c));
+  if (s.appleType != null) d.appleType = s.appleType;
+  if (s.uuids && s.uuids.length) d.uuids = s.uuids.map(u => String(u).toLowerCase());
   d.samples.push(s.rssi); if (d.samples.length > 5) d.samples.shift();
   d.rssi = Math.round(d.samples.reduce((a, b) => a + b, 0) / d.samples.length);
   d.lastSeen = now;
   classifyDevice(d);
-  if (d.level === "danger" && !mon.alerted.has(d.id)) {
+  if ((d.level === "danger" || d.level === "check") && !mon.alerted.has(d.id)) {
     mon.alerted.add(d.id);
     raiseAlert(d);
   }
@@ -964,9 +1056,18 @@ function onScan(s) {
 
 function raiseAlert(d) {
   const b = $("alertBanner");
-  const total = [...mon.devices.values()].filter(x => x.level === "danger").length;
+  // 이미 '위험' 경고가 떠 있으면 덜 위험한 기기로 덮어쓰지 않고 개수만 갱신
+  const shown = b.classList.contains("show") && mon.bannerDevice && mon.devices.get(mon.bannerDevice.id);
+  if (shown && mon.bannerDevice.level === "danger" && d.level !== "danger") {
+    try { navigator.vibrate && navigator.vibrate([250, 120, 250]); } catch (e) {}
+    d = mon.bannerDevice;
+  }
+  mon.bannerDevice = d;
+  const total = [...mon.devices.values()].filter(x => x.level === "danger" || x.level === "check").length;
   const where = d.rssi != null ? distanceHint(d.rssi) : "수동 확인";
-  b.innerHTML = `<b>경고: AI 안경 의심 신호 감지${total > 1 ? ` (총 ${total}개 - 아래 목록 확인)` : ""}</b>` +
+  const title = d.level === "danger" ? "경고: AI 안경 의심 신호 감지" : `주의: ${CATEGORY[d.cat] || "기기"} 신호 감지`;
+  b.style.background = d.level === "danger" ? "var(--red)" : "var(--amber)";
+  b.innerHTML = `<b>${esc(title)}${total > 1 ? ` (의심 기기 총 ${total}개 - 아래 목록 확인)` : ""}</b>` +
     `<br>최근 감지: ${esc(d.name || "(이름 없음)")} · ${esc(where)}` +
     `<br><span style="font-size:12px">${esc(d.reasons.join(" / "))}</span>` +
     `<div class="row"><button class="btn small" data-id="${esc(d.id)}" id="alertTrack">위치 추적</button>` +
@@ -974,14 +1075,14 @@ function raiseAlert(d) {
   b.classList.add("show");
   $("alertTrack").onclick = () => { b.classList.remove("show"); startTrack(d.id); };
   $("alertClose").onclick = () => b.classList.remove("show");
-  try { navigator.vibrate && navigator.vibrate([400, 150, 400, 150, 400]); } catch (e) {}
-  setStatus(`AI 안경 의심 신호 감지: ${d.name || "(이름 없음)"}`);
+  try { navigator.vibrate && navigator.vibrate(d.level === "danger" ? [400, 150, 400, 150, 400] : [250, 120, 250]); } catch (e) {}
+  setStatus(`${d.level === "danger" ? "AI 안경 의심" : CATEGORY[d.cat] || "기기"} 신호 감지: ${d.name || "(이름 없음)"}`);
 }
 
 async function startMonitor() {
   if (!state.sim && !IS_NATIVE) {
     showModal({ title: "자동 감시", message: "자동 감시는 설치형 앱에서만 동작합니다.\n\n" +
-      "웹에서는 아래의 [AI 안경 찾기]를 사용하거나, 시뮬레이션 모드에서 기능을 체험하십시오." });
+      "웹에서는 아래의 [AI 안경 찾기]를 사용하십시오." });
     return;
   }
   if (state.sim) {
@@ -990,7 +1091,8 @@ async function startMonitor() {
       const st = mon.simState[dev.id] ?? dev.base;
       const next = Math.max(-95, Math.min(-38, st + (Math.random() - 0.45) * 6));
       mon.simState[dev.id] = next;
-      onScan({ id: dev.id, name: dev.name, companyIds: dev.companyIds, rssi: Math.round(next) });
+      onScan({ id: dev.id, name: dev.name, companyIds: dev.companyIds, appleType: dev.appleType,
+               uuids: dev.uuids, rssi: Math.round(next) });
     }, 150));
   } else {
     await capReady;
@@ -1017,10 +1119,17 @@ async function startMonitor() {
     try {
       mon.listener = await B.addListener("onScanResult", r => {
         const md = (r && r.manufacturerData) || {};
+        let appleType = null;
+        const apple = md["76"];
+        if (apple != null) {
+          const hex = String(typeof apple === "object" && apple.buffer ? "" : apple).replace(/[^0-9a-f]/gi, "");
+          if (hex.length >= 2) appleType = parseInt(hex.slice(0, 2), 16);
+        }
         onScan({ id: r.device && r.device.deviceId || "unknown",
                  name: r.localName || (r.device && r.device.name) || "",
                  rssi: typeof r.rssi === "number" ? r.rssi : -100,
-                 companyIds: Object.keys(md).map(k => parseInt(k, 10)).filter(n => !isNaN(n)) });
+                 companyIds: Object.keys(md).map(k => parseInt(k, 10)).filter(n => !isNaN(n)),
+                 appleType, uuids: Array.isArray(r.uuids) ? r.uuids : [] });
       });
       await B.requestLEScan({ allowDuplicates: true, scanMode: 2 });
     } catch (e) {
@@ -1059,7 +1168,7 @@ async function stopMonitor() {
 
 function resetMonitor() {
   stopMonitor();
-  mon.devices.clear(); mon.alerted.clear(); mon.simState = {};
+  mon.devices.clear(); mon.alerted.clear(); mon.simState = {}; strict.allow.clear();
   $("alertBanner").classList.remove("show");
   renderDevices();
 }
@@ -1078,7 +1187,7 @@ function renderDevices() {
   $("cntAll").textContent = all.length;
   $("cntDanger").textContent = all.filter(d => d.level === "danger").length;
   $("cntCheck").textContent = all.filter(d => d.level === "check").length;
-  const shown = all.filter(d => d.level !== "normal" || $("showNormalDev").checked);
+  const shown = all.filter(d => (d.level !== "normal" && d.level !== "allowed") || $("showNormalDev").checked);
   const list = $("deviceList");
   if (!all.length) { list.innerHTML = '<div class="empty">아직 감지된 기기가 없습니다.</div>'; return; }
   if (!shown.length) {
@@ -1090,11 +1199,11 @@ function renderDevices() {
     const sig = d.rssi != null ? `신호 세기 ${d.rssi} dBm · ${distanceHint(d.rssi)} · ` : "";
     const canTrack = !d.manual && (IS_NATIVE || state.sim);
     return `<div class="device lv-${d.level}"><div class="bar"></div><div class="body">
-      <div class="top"><span class="name">${esc(d.name || "(이름 없음)")}</span><span class="tag">${LEVEL_LABEL[d.level]}</span></div>
+      <div class="top"><span class="name">${esc(d.name || "(이름 없음)")} <span class="cat">${esc(CATEGORY[d.cat] || "")}</span></span><span class="tag">${LEVEL_LABEL[d.level]}</span></div>
       <div style="font-size:12px;color:var(--sub);margin-top:3px">${esc(sig)}<span class="${lc}">${esc(lt)}</span></div>
       <ul>${d.reasons.map(r => `<li>${esc(r)}</li>`).join("")}</ul>
       <div class="actions">${canTrack ? `<button class="btn small dark" data-act="track" data-id="${esc(d.id)}">위치 추적</button> ` : ""}
-        <button class="btn small green" data-act="record" data-id="${esc(d.id)}">기록</button></div></div></div>`;
+        ${d.level === "check" || d.level === "normal" ? `<button class="btn small outline" data-act="allow" data-id="${esc(d.id)}">허용</button> ` : ""}${d.level === "allowed" ? `<button class="btn small outline" data-act="unallow" data-id="${esc(d.id)}">허용 취소</button> ` : ""}<button class="btn small green" data-act="record" data-id="${esc(d.id)}">기록</button></div></div></div>`;
   }).join("");
 }
 
@@ -1238,7 +1347,7 @@ $("magBaseBtn").onclick = () => {
 $("magResetBtn").onclick = () => { mag.peak = 0; updateMagUI(); };
 $("nearBleBtn").onclick = () => {
   if (!IS_NATIVE && !state.sim) {
-    showModal({ title: "블루투스 근접", message: "블루투스 근접 확인은 앱에서만 동작합니다.\n(시뮬레이션 모드에서는 체험할 수 있습니다.)" });
+    showModal({ title: "블루투스 근접", message: "블루투스 근접 확인은 앱에서만 동작합니다." });
     return;
   }
   if (!mon.running) startMonitor();
@@ -1307,7 +1416,7 @@ async function startMag() {
       return;
     }
   } else {
-    showModal({ title: "자석 센서", message: "자석 센서는 앱에서만 동작합니다.\n(시뮬레이션 모드에서는 체험할 수 있습니다.)" });
+    showModal({ title: "자석 센서", message: "자석 센서는 앱에서만 동작합니다." });
     return;
   }
   mag.running = true;
@@ -1343,7 +1452,7 @@ function updateMagUI() {
   if (mag.base == null) { el.textContent = ""; return; }
   const pl = magLevel(mag.peak);
   el.className = "result " + (pl === "hit" ? "danger" : pl === "warn" ? "warn" : "ok");
-  el.textContent = pl === "hit" ? "강한 자기장 감지 - 스피커 자석 의심 (주변 금속·자석 여부 확인)"
+  el.textContent = pl === "hit" ? "강한 자기장 감지 - 스피커·이어폰 자석 의심 (주변 금속·자석 여부 확인)"
                  : pl === "warn" ? "약한 자기장 변화 - 위치를 바꿔 다시 확인하십시오"
                  : "자기장 변화 없음";
 }
@@ -1353,13 +1462,14 @@ function nearSummary() {
   let ble = { text: "미확인", cls: "na", detail: "" };
   if (mon.running) {
     const now = Date.now();
-    const live = [...mon.devices.values()].filter(d => !d.manual && d.level === "danger" && now - d.lastSeen < 5000)
-      .sort((a, b) => b.rssi - a.rssi);
-    if (!live.length) ble = { text: "감지 안 됨", cls: "ok", detail: "AI 안경 신호 없음" };
+    const live = [...mon.devices.values()].filter(d => !d.manual && (d.level === "danger" || d.level === "check") &&
+      now - d.lastSeen < 5000).sort((a, b) => b.rssi - a.rssi);
+    if (!live.length) ble = { text: "감지 안 됨", cls: "ok", detail: "의심 신호 없음" };
     else {
       const d = live[0];
-      ble = d.rssi >= -50 ? { text: "바로 앞 감지", cls: "hit", detail: `${d.name || "(이름 없음)"} ${d.rssi}dBm` }
-                          : { text: "주변 감지", cls: "warn", detail: `${d.name || "(이름 없음)"} ${d.rssi}dBm` };
+      const label = `${d.name || CATEGORY[d.cat] || "(이름 없음)"} ${d.rssi}dBm`;
+      ble = d.rssi >= -50 ? { text: "바로 앞 감지", cls: "hit", detail: label }
+                          : { text: "주변 감지", cls: "warn", detail: label };
     }
   }
   let lensR = { text: "미확인", cls: "na", detail: "" };
@@ -1376,7 +1486,7 @@ function nearSummary() {
   const checked = [ble, lensR, magR].filter(x => x.cls !== "na").length;
   let level = "이상 없음", verdict = "", color = "var(--sub)";
   if (!checked) verdict = "확인 항목을 하나 이상 실행하십시오.";
-  else if (hits >= 2) { level = "위험"; verdict = `${hits}개 항목에서 강한 반응 - AI 안경일 가능성이 높습니다. 공식 절차에 따라 확인하십시오.`; color = "var(--red)"; }
+  else if (hits >= 2) { level = "위험"; verdict = `${hits}개 항목에서 강한 반응 - 전자기기를 소지했을 가능성이 높습니다. 공식 절차에 따라 확인하십시오.`; color = "var(--red)"; }
   else if (hits === 1 || warns) { level = "주의"; verdict = "일부 항목에서 반응 - 다른 항목으로 추가 확인하십시오."; color = "var(--amber)"; }
   else { verdict = `확인한 ${checked}개 항목에서 반응 없음`; color = "var(--green)"; }
   return { ble, lens: lensR, mag: magR, level, verdict, color };
@@ -1408,7 +1518,7 @@ function checkedItems() {
 }
 function checkLevel() {
   const n = checkedItems().length;
-  if (n >= 3) return { level: "위험", advice: "해당 안경을 직접 확인하십시오.", color: "var(--red)" };
+  if (n >= 3) return { level: "위험", advice: "해당 기기를 직접 확인하십시오.", color: "var(--red)" };
   if (n >= 1) return { level: "주의", advice: "지속적으로 관찰하십시오.", color: "var(--amber)" };
   return { level: "이상 없음", advice: "", color: "var(--sub)" };
 }
@@ -1502,7 +1612,7 @@ $("clearRecordsBtn").onclick = () => {
 
 function buildCsv() {
   const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const rows = [["AI 안경 점검 기록"], ["시험실", store.room], ["감독관", store.proctor],
+  const rows = [["아이캐치 - 시험 전자기기 점검 기록"], ["시험실", store.room], ["감독관", store.proctor],
     ["작성 일시", nowText().slice(0, 16)], ["모드", state.sim ? "시뮬레이션" : "실제"], [],
     ["번호", "시각", "좌석", "판정", "점검 내용", "비고"],
     ...store.records.map((r, i) => [i + 1, r.time, r.seat, r.level, r.what, r.memo]), [],
@@ -1512,7 +1622,7 @@ function buildCsv() {
 $("exportBtn").onclick = async () => {
   if (!store.records.length) { showModal({ title: "CSV 저장", message: "저장된 점검 기록이 없습니다." }); return; }
   const d0 = new Date(), p0 = n => String(n).padStart(2, "0");
-  const fileName = `AI안경_점검기록_${(store.room || "시험실").replace(/[\\/:*?"<>|]/g, "_")}_${d0.getFullYear()}${p0(d0.getMonth() + 1)}${p0(d0.getDate())}.csv`;
+  const fileName = `아이캐치_점검기록_${(store.room || "시험실").replace(/[\\/:*?"<>|]/g, "_")}_${d0.getFullYear()}${p0(d0.getMonth() + 1)}${p0(d0.getDate())}.csv`;
   if (IS_NATIVE) await capReady;
   const FS = IS_NATIVE ? getPlugin("Filesystem") : null, SH = IS_NATIVE ? getPlugin("Share") : null;
   if (FS && SH) {
@@ -1532,7 +1642,7 @@ $("exportBtn").onclick = async () => {
     const a = document.createElement("a");
     const d = new Date(), p = n => String(n).padStart(2, "0");
     a.href = URL.createObjectURL(blob);
-    a.download = `AI안경_점검기록_${store.room || "시험실"}_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}.csv`;
+    a.download = `아이캐치_점검기록_${store.room || "시험실"}_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}.csv`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     setStatus("CSV 파일을 저장했습니다. 다운로드 폴더를 확인하십시오.");
