@@ -102,6 +102,52 @@ public class MagnetometerPlugin extends Plugin implements SensorEventListener {
 }
 `);
 
+fs.writeFileSync(path.join(javaDir, "ScreenGuardPlugin.java"), `package ${pkg};
+
+import android.app.Activity;
+import android.view.Window;
+import android.view.WindowManager;
+
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+
+/** 감시 중 화면이 꺼지지 않게 하고, 화면 밝기를 낮추거나 되돌리는 플러그인 */
+@CapacitorPlugin(name = "ScreenGuard")
+public class ScreenGuardPlugin extends Plugin {
+
+    @PluginMethod
+    public void keepScreenOn(PluginCall call) {
+        final boolean on = Boolean.TRUE.equals(call.getBoolean("on", true));
+        final Activity activity = getActivity();
+        if (activity == null) { call.reject("화면을 제어할 수 없습니다."); return; }
+        activity.runOnUiThread(() -> {
+            Window window = activity.getWindow();
+            if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            call.resolve();
+        });
+    }
+
+    /** value: 0.01 ~ 1.0 = 앱 화면 밝기, -1 = 휴대폰 설정 밝기로 되돌리기 */
+    @PluginMethod
+    public void setBrightness(PluginCall call) {
+        Double value = call.getDouble("value", -1.0);
+        final float v = value == null ? -1f : (float) Math.max(-1.0, Math.min(1.0, value));
+        final Activity activity = getActivity();
+        if (activity == null) { call.reject("화면을 제어할 수 없습니다."); return; }
+        activity.runOnUiThread(() -> {
+            Window window = activity.getWindow();
+            WindowManager.LayoutParams lp = window.getAttributes();
+            lp.screenBrightness = v < 0 ? WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE : Math.max(0.01f, v);
+            window.setAttributes(lp);
+            call.resolve();
+        });
+    }
+}
+`);
+
 fs.writeFileSync(path.join(javaDir, "MainActivity.java"), `package ${pkg};
 
 import android.os.Bundle;
@@ -111,11 +157,12 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(MagnetometerPlugin.class);   // 자기장 센서 플러그인 등록
+        registerPlugin(ScreenGuardPlugin.class);    // 화면 유지·밝기 플러그인 등록
         super.onCreate(savedInstanceState);
     }
 }
 `);
-console.log("자기장 센서 플러그인 추가:", javaDir);
+console.log("자기장 센서·화면 유지 플러그인 추가:", javaDir);
 
 // ── 3) 앱 아이콘·시작 화면 ───────────────────────────────
 const resSrc = path.join(__dirname, "..", "resources", "res");

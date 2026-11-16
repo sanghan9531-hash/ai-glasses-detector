@@ -150,6 +150,17 @@
   .meter div { height: 100%; width: 0; background: var(--green); transition: width .15s; }
   .big { font-size: 34px; font-weight: 700; text-align: center; margin-top: 4px; }
   .big small { font-size: 14px; color: var(--sub); font-weight: 500; }
+  #dimOverlay { position: fixed; inset: 0; background: #000; z-index: 60; display: none;
+    flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    color: #334155; font-size: 13px; line-height: 1.8; padding: 20px; user-select: none; -webkit-user-select: none; }
+  #dimOverlay.show { display: flex; }
+  #dimOverlay .dot { width: 8px; height: 8px; border-radius: 50%; background: #14532D; margin-bottom: 10px;
+    animation: blink 2s infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+  #dimOverlay.dim-alert { box-shadow: inset 0 0 0 6px #7F1D1D; color: #EF4444; }
+  #dimOverlay.dim-alert .dot { background: #DC2626; }
+  #dimAlert { font-size: 16px; font-weight: 700; color: #EF4444; margin: 10px 0; display: none; }
+  #dimOverlay.dim-alert #dimAlert { display: block; }
   footer { font-size: 11.5px; color: var(--sub); text-align: center; padding: 12px 16px 18px; line-height: 1.6; }
   .status { background: #E2E8F0; color: var(--accent); font-size: 12px; padding: 7px 14px; }
 
@@ -240,6 +251,10 @@
         <label class="check-inline"><input type="checkbox" id="strictMode" checked> <b>시험장 모드</b>: 이어폰·워치·휴대폰도 표시</label>
         <button class="btn small outline" id="allowAllBtn">현재 기기 모두 허용</button>
       </div>
+
+      <button class="btn block dark" id="dimBtn" style="margin-top:8px">화면 어둡게 (감시 유지)</button>
+      <p class="desc" style="margin:4px 0 0">감시 중에는 화면이 자동으로 꺼지지 않습니다. 오래 감시할 때는 이 버튼으로 화면을
+        까맣게 하고 밝기를 최저로 낮추십시오. <b>전원 버튼으로 화면을 끄면 감시가 멈출 수 있습니다.</b></p>
 
       <div id="alertBanner" class="alert"></div>
 
@@ -362,6 +377,12 @@
     최종 판단은 감독관이 직접 확인 후 내립니다.</footer>
 </div>
 
+<div id="dimOverlay">
+  <div class="dot"></div>
+  <div id="dimAlert"></div>
+  <div id="dimText">전파 감시 중</div>
+  <div style="margin-top:14px;color:#1E293B">화면을 두 번 누르면 돌아갑니다</div>
+</div>
 <div class="modal-back" id="modalBack"><div class="modal" id="modal"></div></div>
 
 <script>
@@ -1034,6 +1055,65 @@ $("deviceList").addEventListener("click", e => {
     (d.rssi != null ? ` (${d.rssi} dBm)` : "") + " - " + d.reasons.join("; "), LEVEL_LABEL[d.level]);
 });
 
+/* 화면 유지·절전 감시 화면 */
+const guard = { dim: false, lastTap: 0, hiddenAt: 0 };
+const hms = t => { const d = new Date(t), p = n => String(n).padStart(2, "0");
+                   return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
+async function screenGuard(method, args) {
+  if (!IS_NATIVE) return;
+  await capReady;
+  const G = getPlugin("ScreenGuard");
+  if (G && typeof G[method] === "function") { try { await G[method](args); } catch (e) {} }
+}
+function enterDim() {
+  if (!mon.running) { showModal({ title: "화면 어둡게", message: "전파 감시를 먼저 시작하십시오." }); return; }
+  guard.dim = true;
+  $("dimOverlay").classList.remove("dim-alert");
+  $("dimOverlay").classList.add("show");
+  updateDim();
+  screenGuard("setBrightness", { value: 0.01 });
+  setStatus("절전 감시 화면: 화면을 두 번 누르면 돌아갑니다.");
+}
+function exitDim() {
+  if (!guard.dim) return;
+  guard.dim = false;
+  $("dimOverlay").classList.remove("show", "dim-alert");
+  screenGuard("setBrightness", { value: -1 });
+}
+function updateDim() {
+  if (!guard.dim) return;
+  const all = [...mon.devices.values()];
+  const dn = all.filter(d => d.level === "danger").length, ck = all.filter(d => d.level === "check").length;
+  $("dimText").innerHTML = `전파 감시 중 · ${esc(hms(Date.now()).slice(0, 5))}<br>위험 ${dn} · 주의 ${ck}`;
+}
+$("dimBtn").onclick = enterDim;
+$("dimOverlay").addEventListener("click", () => {
+  const now = Date.now();
+  if (now - guard.lastTap < 450) { guard.lastTap = 0; exitDim(); } else guard.lastTap = now;
+});
+// 화면이 꺼졌다 켜지면: 멈췄을 수 있는 구간 안내 + 감시 다시 시작
+document.addEventListener("visibilitychange", async () => {
+  if (!mon.running) return;
+  if (document.hidden) { guard.hiddenAt = Date.now(); return; }
+  if (!guard.hiddenAt) return;
+  const from = guard.hiddenAt, to = Date.now(); guard.hiddenAt = 0;
+  const sec = Math.round((to - from) / 1000);
+  if (sec < 10) return;
+  if (IS_NATIVE && !state.sim) {
+    const B = getPlugin("BluetoothLe");
+    if (B) { try { await B.stopLEScan(); await B.requestLEScan({ allowDuplicates: true, scanMode: 2 }); } catch (e) {} }
+  }
+  const gap = `${hms(from)} ~ ${hms(to)} (${Math.floor(sec / 60)}분 ${sec % 60}초)`;
+  setStatus("감시 중단 가능 구간: " + gap);
+  showModal({ title: "감시가 멈췄을 수 있습니다",
+    message: `${gap} 동안 화면이 꺼져 있었거나 다른 앱이 열려 있어, 블루투스 감시가 멈췄을 수 있습니다.\n\n` +
+             "감시를 다시 시작했습니다. 이 시간대는 직접 순회하여 점검하십시오.",
+    buttons: [{ label: "확인", kind: "outline" },
+              { label: "기록에 남기기", kind: "green", onClick: () => {
+                  setTimeout(() => openRecordDialog(`[감시 중단] ${gap} 화면 꺼짐 등으로 전파 감시가 멈췄을 수 있음`, "주의"), 50);
+              } }] });
+});
+
 function reclassifyAll() { mon.devices.forEach(classifyDevice); renderDevices(); }
 
 function onScan(s) {
@@ -1063,6 +1143,11 @@ function raiseAlert(d) {
     d = mon.bannerDevice;
   }
   mon.bannerDevice = d;
+  if (guard.dim) {
+    $("dimOverlay").classList.add("dim-alert");
+    $("dimAlert").textContent = (d.level === "danger" ? "AI 안경 의심 신호" : `${CATEGORY[d.cat] || "기기"} 신호`) + " 감지";
+    screenGuard("setBrightness", { value: 0.3 });
+  }
   const total = [...mon.devices.values()].filter(x => x.level === "danger" || x.level === "check").length;
   const where = d.rssi != null ? distanceHint(d.rssi) : "수동 확인";
   const title = d.level === "danger" ? "경고: AI 안경 의심 신호 감지" : `주의: ${CATEGORY[d.cat] || "기기"} 신호 감지`;
@@ -1143,6 +1228,7 @@ async function startMonitor() {
   }
   try { if (navigator.wakeLock) mon.wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {}
   mon.running = true;
+  screenGuard("keepScreenOn", { on: true });
   mon.timers.push(setInterval(renderDevices, 1000));
   $("monitorBtn").textContent = "감시 중지"; $("monitorBtn").classList.add("red");
   $("monitorState").textContent = "감시 중" + (state.sim ? " (시뮬레이션)" : ""); $("monitorState").className = "live on";
@@ -1160,6 +1246,8 @@ async function stopMonitor() {
   try { if (mon.wakeLock) mon.wakeLock.release(); } catch (e) {}
   mon.wakeLock = null;
   stopTrack();
+  exitDim();
+  if (wasRunning) screenGuard("keepScreenOn", { on: false });
   $("monitorBtn").textContent = "감시 시작"; $("monitorBtn").classList.remove("red");
   $("monitorState").textContent = "감시 중지됨"; $("monitorState").className = "live";
   if (wasRunning) setStatus("블루투스 전파 감시를 중지했습니다.");
@@ -1182,6 +1270,7 @@ function liveText(d, now) {
 }
 
 function renderDevices() {
+  updateDim();
   const now = Date.now();
   const all = [...mon.devices.values()].sort((a, b) => (b.score - a.score) || ((b.rssi ?? -999) - (a.rssi ?? -999)));
   $("cntAll").textContent = all.length;
