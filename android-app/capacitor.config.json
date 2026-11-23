@@ -1,6 +1,6 @@
 {
-  "appId": "io.github.sanghan9531.aiglasses",
-  "appName": "AI 안경 탐지",
+  "appId": "io.github.sanghan9531.eyecatch",
+  "appName": "아이캐치",
   "webDir": "www",
   "android": {
     "allowMixedContent": false
