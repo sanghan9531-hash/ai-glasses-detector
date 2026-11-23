@@ -181,8 +181,10 @@ const varsPath = path.join(androidDir, "variables.gradle");
 if (fs.existsSync(varsPath)) {
   let v = fs.readFileSync(varsPath, "utf8");
   v = v.replace(/(compileSdkVersion\s*=\s*)\d+/, "$136").replace(/(targetSdkVersion\s*=\s*)\d+/, "$136");
+  // 구글 플레이 자동 보호: 최소 SDK 24(안드로이드 7.0) 이상 필요
+  v = v.replace(/(minSdkVersion\s*=\s*)(\d+)/, (m, a, n) => a + Math.max(24, parseInt(n, 10)));
   fs.writeFileSync(varsPath, v);
-  console.log("compileSdk/targetSdk → 36");
+  console.log("minSdk ≥ 24, compileSdk/targetSdk → 36");
 }
 const propsPath = path.join(androidDir, "gradle.properties");
 if (fs.existsSync(propsPath)) {
